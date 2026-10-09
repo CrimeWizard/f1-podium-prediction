@@ -20,67 +20,48 @@ SETUP_MD = """# Milestone 1 — Kaggle edition
 Download outputs from the **Output** tab (`figures/`, `processed/*.csv`).
 """
 
-SETUP_CODE = """# Kaggle environment setup
+SETUP_CODE = """# Kaggle environment setup (run first; Internet ON for git clone)
 import os
 import subprocess
 import sys
-import zipfile
 from pathlib import Path
 
 WORK = Path("/kaggle/working") if Path("/kaggle/working").exists() else Path.cwd()
 INPUT = Path("/kaggle/input") if Path("/kaggle/input").exists() else None
 
-
-def find_project_root() -> Path | None:
-    candidates = [WORK, Path.cwd()]
-    if INPUT:
-        for zpath in INPUT.rglob("*.zip"):
-            try:
-                with zipfile.ZipFile(zpath) as zf:
-                    if any(n.startswith("src/") for n in zf.namelist()):
-                        zf.extractall(WORK)
-                        print("Extracted zip:", zpath)
-            except zipfile.BadZipFile:
-                pass
-        for cfg in INPUT.rglob("src/config.py"):
-            return cfg.parent.parent
-    for base in candidates:
-        if (base / "src" / "config.py").exists():
-            return base
-        if (base.parent / "src" / "config.py").exists():
-            return base.parent
-    return None
-
-
-ROOT = find_project_root()
-if ROOT is None and Path("/kaggle/working").exists():
-    repo = WORK / "f1-podium-prediction"
-    if not (repo / "src" / "config.py").exists():
-        print("Cloning GitHub repo (Internet must be ON)...")
-        subprocess.run(
-            ["git", "clone", "--depth", "1", "https://github.com/CrimeWizard/f1-podium-prediction.git", str(repo)],
-            check=True,
-        )
-    ROOT = repo
-
-if ROOT is None or not (ROOT / "src" / "config.py").exists():
+# --- 1) F1 CSVs live in a DIFFERENT dataset (Formula 1 World Championship) ---
+csv_dir = None
+if INPUT:
+    for results in INPUT.rglob("results.csv"):
+        folder = results.parent
+        if (folder / "circuits.csv").exists() and (folder / "races.csv").exists():
+            csv_dir = folder
+            break
+if csv_dir is None:
     raise FileNotFoundError(
-        "Cannot find src/. Add dataset f1-podium-src OR enable Internet for git clone."
+        "Add the Formula 1 World Championship CSV dataset (rohanrao or Vopani) in Add data."
+    )
+os.environ["F1_DATA_RAW"] = str(csv_dir)
+
+# --- 2) Code lives in /kaggle/working (clone full repo; do not use f1-podium-src as ROOT) ---
+ROOT = WORK / "f1-podium-prediction"
+if not (ROOT / "src" / "config.py").exists():
+    subprocess.run(
+        ["git", "clone", "--depth", "1", "https://github.com/CrimeWizard/f1-podium-prediction.git", str(ROOT)],
+        check=True,
     )
 
 sys.path.insert(0, str(ROOT))
 os.chdir(ROOT)
+subprocess.run(
+    [sys.executable, "-m", "pip", "install", "-q", "imbalanced-learn", "shap", "lime"],
+    check=False,
+)
 
-if Path("/kaggle/working").exists():
-    subprocess.run(
-        [sys.executable, "-m", "pip", "install", "-q", "imbalanced-learn", "shap", "lime"],
-        check=False,
-    )
+from src.config import get_data_raw
 
-from src.config import DATA_RAW
-
-print("Project root:", ROOT)
-print("CSV folder:", DATA_RAW, "| OK:", (DATA_RAW / "results.csv").exists())
+print("Project root (code):", ROOT)
+print("CSV folder (data):", get_data_raw(), "| OK:", (get_data_raw() / "results.csv").exists())
 """
 
 

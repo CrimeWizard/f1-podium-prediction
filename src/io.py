@@ -6,13 +6,13 @@ from typing import Dict
 
 import pandas as pd
 
-from src.config import DATA_RAW, TABLE_FILES
+from src.config import TABLE_FILES, get_data_raw
 
 NA_VALUES = ["\\N", "NA", ""]
 
 
 def raw_table_paths(raw_dir: Path | None = None) -> Dict[str, Path]:
-    root = raw_dir or DATA_RAW
+    root = raw_dir or get_data_raw()
     return {name.replace(".csv", ""): root / name for name in TABLE_FILES}
 
 
@@ -22,7 +22,7 @@ def missing_tables(raw_dir: Path | None = None) -> list[str]:
 
 
 def load_raw_tables(raw_dir: Path | None = None) -> Dict[str, pd.DataFrame]:
-    root = raw_dir or DATA_RAW
+    root = raw_dir or get_data_raw()
     missing = missing_tables(root)
     if missing:
         raise FileNotFoundError(

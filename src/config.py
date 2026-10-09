@@ -6,14 +6,27 @@ from pathlib import Path
 
 
 def _find_kaggle_csv_dir() -> Path | None:
-    """Locate Ergast CSV folder under /kaggle/input when running on Kaggle."""
+    """Locate Ergast CSV folder under /kaggle/input (nested dataset paths included)."""
     kaggle_input = Path("/kaggle/input")
     if not kaggle_input.exists():
         return None
-    for child in kaggle_input.iterdir():
-        if child.is_dir() and (child / "results.csv").exists():
-            return child
+    for results in kaggle_input.rglob("results.csv"):
+        parent = results.parent
+        # Skip code-only datasets that might ship a stub csv
+        if (parent / "circuits.csv").exists() and (parent / "races.csv").exists():
+            return parent
     return None
+
+
+def get_data_raw() -> Path:
+    """Resolve CSV directory (Kaggle input, env override, or local data/raw)."""
+    explicit = os.environ.get("F1_DATA_RAW")
+    if explicit:
+        return Path(explicit)
+    found = _find_kaggle_csv_dir()
+    if found:
+        return found
+    return project_root() / "data" / "raw"
 
 
 def project_root() -> Path:
@@ -21,7 +34,8 @@ def project_root() -> Path:
 
 
 PROJECT_ROOT = project_root()
-DATA_RAW = Path(os.environ.get("F1_DATA_RAW", _find_kaggle_csv_dir() or (PROJECT_ROOT / "data" / "raw")))
+# Prefer get_data_raw() — DATA_RAW is evaluated at import time and may be stale on Kaggle.
+DATA_RAW = get_data_raw()
 DATA_PROCESSED = PROJECT_ROOT / "data" / "processed"
 FIGURES_DIR = PROJECT_ROOT / "outputs" / "figures"
 MODELS_DIR = PROJECT_ROOT / "models"
