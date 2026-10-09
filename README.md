@@ -2,6 +2,24 @@
 
 Binary classification: **will this driver finish on the podium?** Features use only information **after qualifying, before the race** (no leakage).
 
+## Clone & run (for teammates)
+
+```bash
+git clone https://github.com/CrimeWizard/f1-podium-prediction.git
+cd f1-podium-prediction
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+pip install -r requirements-ml.txt   # optional: NN + SHAP + LIME
+
+# Download F1 CSVs (~6 MB) into data/raw/
+pip install kagglehub
+python -c "import kagglehub, shutil; from pathlib import Path; p=Path(kagglehub.dataset_download('rohanrao/formula-1-world-championship-1950-2020')); d=Path('data/raw'); d.mkdir(parents=True, exist_ok=True); [shutil.copy2(f,d/f.name) for f in p.glob('*.csv')]"
+
+jupyter notebook notebooks/milestone1.ipynb   # Run All
+```
+
+CSV files are **not** in git (too large / license); each person downloads once from Kaggle.
+
 ## Repository layout
 
 | Path | Purpose |
