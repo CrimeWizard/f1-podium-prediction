@@ -1,6 +1,7 @@
 """Leakage-safe feature table for podium classification."""
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 
 from src.cleaning import clean_qualifying_times
@@ -41,7 +42,7 @@ def rolling_driver_form(base: pd.DataFrame, window: int = 5) -> pd.DataFrame:
         .apply(lambda s: s.shift(1).rolling(window, min_periods=1).count())
         .reset_index(level=0, drop=True)
     )
-    df["podium_rate_prev"] = df["podiums_prev"] / df["starts_prev"].replace(0, pd.NA)
+    df["podium_rate_prev"] = (df["podiums_prev"] / df["starts_prev"].replace(0, np.nan)).astype("float64")
     return df[["raceId", "driverId", "podium_rate_prev"]]
 
 
@@ -88,4 +89,7 @@ def build_modeling_table(tables: dict, base: pd.DataFrame) -> pd.DataFrame:
         "podium",
     ]
     existing = [c for c in keep if c in df.columns]
-    return df[existing]
+    out = df[existing].copy()
+    for col in out.select_dtypes(include="number").columns:
+        out[col] = pd.to_numeric(out[col], errors="coerce").astype("float64")
+    return out

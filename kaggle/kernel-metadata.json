@@ -1,0 +1,14 @@
+{
+  "id": "YOUR_KAGGLE_USERNAME/f1-podium-milestone1",
+  "title": "GUC F1 Podium Prediction Milestone 1",
+  "code_file": "../notebooks/milestone1_kaggle.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": false,
+  "enable_gpu": false,
+  "enable_internet": true,
+  "dataset_sources": [
+    "rohanrao/formula-1-world-championship-1950-2020",
+    "YOUR_KAGGLE_USERNAME/f1-podium-src"
+  ]
+}

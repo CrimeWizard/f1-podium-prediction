@@ -29,3 +29,6 @@ figures/
 # Secrets
 .kaggle/
 .env
+
+# Kaggle bundle (regenerate with scripts/package_kaggle_bundle.sh)
+kaggle/f1-podium-src.zip

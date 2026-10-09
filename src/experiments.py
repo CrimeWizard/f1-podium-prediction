@@ -76,3 +76,57 @@ def preprocessing_order_experiments(train_df, val_df) -> pd.DataFrame:
         proba = pipe.predict_proba(X_val[num_cols])[:, 1]
         rows.append({"preprocessing_order": name, "pr_auc_val": average_precision_score(y_val, proba)})
     return pd.DataFrame(rows)
+
+
+def imputation_strategy_experiment(train_df, val_df) -> pd.DataFrame:
+    """Experiment 2: median vs mean imputation (numeric columns, logistic baseline)."""
+    from sklearn.impute import SimpleImputer
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.metrics import average_precision_score
+    from sklearn.pipeline import Pipeline
+    from sklearn.preprocessing import StandardScaler
+
+    feats = feature_columns(train_df)
+    X_train, y_train = train_df[feats], train_df[TARGET]
+    X_val, y_val = val_df[feats], val_df[TARGET]
+    num_cols = X_train.select_dtypes(include="number").columns.tolist()
+
+    rows = []
+    for strategy in ("median", "mean"):
+        pipe = Pipeline([
+            ("imputer", SimpleImputer(strategy=strategy)),
+            ("scaler", StandardScaler()),
+            ("clf", LogisticRegression(max_iter=2000, class_weight="balanced")),
+        ])
+        pipe.fit(X_train[num_cols], y_train)
+        proba = pipe.predict_proba(X_val[num_cols])[:, 1]
+        rows.append({"imputation_strategy": strategy, "pr_auc_val": average_precision_score(y_val, proba)})
+    return pd.DataFrame(rows)
+
+
+def indy_500_exclusion_experiment(tables) -> pd.DataFrame:
+    """Compare PR-AUC with vs without Indianapolis 500 championship rounds."""
+    from src.cleaning import build_base_results_table
+    from src.features import build_modeling_table
+    from src.splits import temporal_split
+
+    rows = []
+    for exclude_indy, label in [(True, "exclude_indy_500"), (False, "include_indy_500")]:
+        base, _ = build_base_results_table(tables, exclude_indy=exclude_indy)
+        model_df = build_modeling_table(tables, base)
+        train_df, val_df, test_df = temporal_split(model_df)
+        feats = feature_columns(train_df)
+        pipe, thr = train_logistic_regression(
+            train_df[feats], train_df[TARGET], val_df[feats], val_df[TARGET]
+        )
+        proba_val = pipe.predict_proba(val_df[feats])[:, 1]
+        proba_test = pipe.predict_proba(test_df[feats])[:, 1]
+        _, pr_val, _ = evaluate_probs(val_df[TARGET], proba_val, thr)
+        _, pr_test, _ = evaluate_probs(test_df[TARGET], proba_test, thr)
+        rows.append({
+            "indy_policy": label,
+            "n_rows": len(model_df),
+            "pr_auc_val": pr_val,
+            "pr_auc_test": pr_test,
+        })
+    return pd.DataFrame(rows)

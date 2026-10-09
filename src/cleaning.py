@@ -1,7 +1,6 @@
 """Cleaning: sentinels, typing, grain (raceId, driverId), duplicate policy."""
 from __future__ import annotations
 
-import re
 from typing import Tuple
 
 import numpy as np
@@ -60,20 +59,17 @@ def dedupe_driver_race_rows(
     if not dup_mask.any():
         return r, dups
 
-    def pick_group(g: pd.DataFrame) -> pd.DataFrame:
+    def pick_index(g: pd.DataFrame) -> int:
         if policy == "started_car":
             started = g[g["grid"].fillna(0) > 0]
             if len(started) == 1:
-                return started.iloc[[0]]
+                return int(started.index[0])
             if len(started) > 1:
-                return started.sort_values("positionOrder").iloc[[0]]
-        return g.sort_values("positionOrder").iloc[[0]]
+                return int(started.sort_values("positionOrder").index[0])
+        return int(g.sort_values("positionOrder").index[0])
 
-    kept = (
-        r.groupby(["raceId", "driverId"], group_keys=False)
-        .apply(pick_group)
-        .reset_index(drop=True)
-    )
+    keep_idx = r.groupby(["raceId", "driverId"], group_keys=False).apply(pick_index)
+    kept = r.loc[keep_idx.tolist()].reset_index(drop=True)
     return kept, dups
 
 

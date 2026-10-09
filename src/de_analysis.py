@@ -117,12 +117,12 @@ def question3_mechanical_retirement_by_constructor(
     """
     Q3: mechanical retirement rate by constructor, 2014–2021 vs 2022–2024.
     """
-    st = status.rename(columns={"status": "status_text"})
+    from src.status_mapping import build_status_mapping
+
+    mapping = build_status_mapping(status)
+    st = mapping.rename(columns={"status": "status_text"})
     df = base.merge(st, on="statusId", how="left")
-    df["mechanical"] = _status_is_mechanical(df["status_text"])
-    finished_like = df["status_text"].fillna("").str.lower().str.match(r"^(finished|\+[0-9]+ lap)")
-    df["dnf"] = ~finished_like
-    df["mechanical_dnf"] = df["dnf"] & df["mechanical"]
+    df["mechanical_dnf"] = df["category"] == "mechanical"
 
     def era_label(y: int) -> str | None:
         if HYBRID_ERA_START <= y <= HYBRID_ERA_END:

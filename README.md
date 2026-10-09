@@ -42,6 +42,18 @@ jupyter notebook notebooks/milestone1.ipynb
 
 Use **Run All** after data is present. The notebook saves processed tables and figures under `data/processed/` and `outputs/figures/`.
 
+Regenerate the report draft after a successful run:
+
+```bash
+python scripts/generate_report.py   # writes docs/ANALYTICAL_REPORT.md
+```
+
+Export `docs/ANALYTICAL_REPORT.md` to PDF for submission (LibreOffice, Pandoc, or your editor).
+
+## Run on Kaggle
+
+See **[docs/KAGGLE.md](docs/KAGGLE.md)** — upload `notebooks/milestone1_kaggle.ipynb`, attach the F1 dataset + `f1-podium-src.zip`, enable Internet, **Run All**.
+
 ## Submission checklist
 
 - Accessible **Kaggle notebook** link (can duplicate/sync from this repo)

@@ -116,3 +116,30 @@ def score_all_splits(name: str, y, proba, split_name: str, threshold: float) -> 
     roc, pr, _ = evaluate_probs(y, proba, threshold)
     f1 = f1_score(y, (proba >= threshold).astype(int))
     return MetricRow(name, split_name, roc, pr, f1)
+
+
+def collect_sklearn_metrics(
+    model_name: str,
+    pipeline: Pipeline,
+    splits: Dict[str, Tuple[pd.DataFrame, pd.Series]],
+    threshold: float,
+) -> List[MetricRow]:
+    rows: List[MetricRow] = []
+    for split_name, (X, y) in splits.items():
+        proba = pipeline.predict_proba(X)[:, 1]
+        rows.append(score_all_splits(model_name, y, proba, split_name, threshold))
+    return rows
+
+
+def collect_ffnn_metrics(
+    model_name: str,
+    model,
+    prep: ColumnTransformer,
+    splits: Dict[str, Tuple[pd.DataFrame, pd.Series]],
+    threshold: float,
+) -> List[MetricRow]:
+    rows: List[MetricRow] = []
+    for split_name, (X, y) in splits.items():
+        proba = model.predict(prep.transform(X), verbose=0).ravel()
+        rows.append(score_all_splits(model_name, y, proba, split_name, threshold))
+    return rows

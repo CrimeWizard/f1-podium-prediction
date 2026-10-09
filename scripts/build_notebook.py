@@ -8,21 +8,42 @@ NB = ROOT / "notebooks" / "milestone1.ipynb"
 
 cells = []
 
+
 def md(source: str):
     cells.append({"cell_type": "markdown", "metadata": {}, "source": source.splitlines(keepends=True)})
 
+
 def code(source: str):
-    cells.append({"cell_type": "code", "metadata": {}, "outputs": [], "execution_count": None, "source": source.splitlines(keepends=True)})
+    cells.append(
+        {
+            "cell_type": "code",
+            "metadata": {},
+            "outputs": [],
+            "execution_count": None,
+            "source": source.splitlines(keepends=True),
+        }
+    )
+
 
 md("""# Milestone 1: F1 Podium Prediction
 
-**Target:** `podium` = `positionOrder <= 3`  
-**Cutoff:** features only from after qualifying / before race start.
+## Problem definition
+- **Unit of analysis:** one driver in one race (`raceId`, `driverId`).
+- **Target:** `podium = 1` if `positionOrder <= 3`.
+- **Prediction cutoff:** after qualifying, **before** the race. We never use this race's result fields, pit stops, lap times, or post-race standings as features.
 
-Run this notebook top-to-bottom after placing Ergast CSVs in `data/raw/`.
+## Evaluation metrics
+| Metric | Role |
+|--------|------|
+| **PR-AUC** | **Primary** — podiums are rare (~15% of rows); PR-AUC reflects ranking quality for the positive class. |
+| **ROC-AUC** | Secondary — overall separability. |
+| **F1** | Secondary — precision/recall at a threshold chosen on **validation only**. |
+
+Hyperparameters and probability thresholds are tuned on train/validation; **test is untouched** until final reporting.
 """)
 
-code("""import sys
+code(
+    """import sys
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -36,34 +57,44 @@ sys.path.insert(0, str(ROOT))
 
 from src.audit import audit_foreign_keys, audit_primary_keys
 from src.cleaning import build_base_results_table
-from src.config import FIGURES_DIR, DATA_PROCESSED
+from src.config import DATA_PROCESSED, FIGURES_DIR
 from src.de_analysis import (
     question1_front_row_podium_by_circuit,
     question2_home_podium_controlled_grid,
     question3_mechanical_retirement_by_constructor,
 )
-from src.experiments import ablation_table, preprocessing_order_experiments
+from src.experiments import (
+    ablation_table,
+    imputation_strategy_experiment,
+    indy_500_exclusion_experiment,
+    preprocessing_order_experiments,
+)
 from src.features import build_modeling_table
 from src.inference import predict_podium
 from src.io import load_raw_tables, missing_tables, save_processed
 from src.splits import temporal_split
+from src.status_mapping import build_status_mapping
 from src.train import (
     TARGET,
+    collect_ffnn_metrics,
+    collect_sklearn_metrics,
     feature_columns,
-    score_all_splits,
     train_logistic_regression,
     train_random_forest,
     train_shallow_ffnn,
+    pick_threshold_on_val,
 )
 from src.xai import permutation_importance_table
 
 sns.set_theme(style="whitegrid")
 FIGURES_DIR.mkdir(parents=True, exist_ok=True)
 DATA_PROCESSED.mkdir(parents=True, exist_ok=True)
-""")
+"""
+)
 
 md("## 0. Load data")
-code("""missing = missing_tables()
+code(
+    """missing = missing_tables()
 if missing:
     raise FileNotFoundError(
         "Place Kaggle CSV files in data/raw. Missing: " + ", ".join(missing)
@@ -71,10 +102,17 @@ if missing:
 
 tables = load_raw_tables()
 list(tables.keys())
-""")
+"""
+)
 
-md("## 1. EDA (before cleaning)")
-code("""results_raw = tables["results"]
+md(
+    """## 1. EDA (before cleaning)
+
+We inspect raw shape, target-related columns, and **qualifying coverage by season** (historical drift motivates median imputation and lagged grid/qualifying features).
+"""
+)
+code(
+    """results_raw = tables["results"]
 fig, ax = plt.subplots(figsize=(8, 4))
 results_raw["positionOrder"].hist(bins=30, ax=ax)
 ax.set_title("positionOrder distribution (raw)")
@@ -89,10 +127,23 @@ cov_by_year = cov.groupby("year")["rows"].mean()
 cov_by_year.plot(figsize=(9, 4), title="Mean qualifying rows per race by season")
 plt.savefig(FIGURES_DIR / "eda_qualifying_coverage_by_year.png", bbox_inches="tight")
 plt.show()
-""")
+"""
+)
 
-md("## 2. Auditing keys & cleaning")
-code("""pk = pd.DataFrame([r.__dict__ for r in audit_primary_keys(tables)])
+md(
+    """## 2. Auditing keys & cleaning
+
+**Sentinels:** CSV `\\N` parsed as missing via `na_values` in `src/io.py`.
+
+**Grain:** enforce one row per (`raceId`, `driverId`). Early-era **shared drives** create duplicates; we keep the row with the **best `positionOrder`** (lowest value) and document dropped rows in `duplicate_audit`.
+
+**Indianapolis 500 (1950–1960):** excluded from the modeling base (optional sensitivity experiment in §7) because it is not comparable to road-course F1.
+
+**Immutability:** raw files in `data/raw/` are never overwritten; cleaning writes to `data/processed/`.
+"""
+)
+code(
+    """pk = pd.DataFrame([r.__dict__ for r in audit_primary_keys(tables)])
 fk = pd.DataFrame([r.__dict__ for r in audit_foreign_keys(tables)])
 display(pk)
 display(fk)
@@ -105,18 +156,35 @@ base, duplicate_audit = build_base_results_table(
 print("Duplicate (raceId, driverId) rows before policy:", len(duplicate_audit))
 assert base.duplicated(["raceId", "driverId"]).sum() == 0
 save_processed(base, "base_results")
-""")
+"""
+)
 
 md("## 3. EDA (after cleaning)")
-code("""fig, ax = plt.subplots(figsize=(6, 4))
+code(
+    """fig, ax = plt.subplots(figsize=(6, 4))
 base.groupby("year")["podium"].mean().plot(ax=ax)
 ax.set_title("Podium rate by season (after cleaning)")
 plt.savefig(FIGURES_DIR / "eda_podium_rate_by_year.png", bbox_inches="tight")
 plt.show()
-""")
+"""
+)
 
-md("## 4. Data-engineering questions")
-code("""q1 = question1_front_row_podium_by_circuit(base, tables["circuits"])
+md(
+    """## 4. Data-engineering questions
+
+**Q1** uses **grid positions 1–2** (front row after penalties), not qualifying position alone. Era split at **2014** (hybrid rules).
+
+**Q2** compares home vs away podiums within **grid bins** so we do not confound home advantage with better qualifying.
+
+**Q3** mechanical retirements use an explicit **status → category** map (`src/status_mapping.py`); only `category == mechanical` counts, excluding crashes/driver errors/regulatory DNFs.
+"""
+)
+code(
+    """status_map = build_status_mapping(tables["status"])
+status_map.to_csv(DATA_PROCESSED / "status_category_mapping.csv", index=False)
+display(status_map.groupby("category").size().rename("count"))
+
+q1 = question1_front_row_podium_by_circuit(base, tables["circuits"])
 q1_top = q1.sort_values("podium_rate", ascending=False).groupby("era").head(10)
 display(q1_top)
 
@@ -128,71 +196,135 @@ plt.show()
 
 q2 = question2_home_podium_controlled_grid(base, tables["drivers"], tables["circuits"])
 display(q2)
-q2.pivot(index="grid_bin", columns="home_race", values="podium_rate").plot(kind="bar", figsize=(8, 4), title="Q2 home vs away by grid bin")
+q2.pivot(index="grid_bin", columns="home_race", values="podium_rate").plot(
+    kind="bar", figsize=(8, 4), title="Q2 home vs away by grid bin"
+)
 plt.savefig(FIGURES_DIR / "de_q2_home_advantage.png", bbox_inches="tight")
 plt.show()
 
 q3 = question3_mechanical_retirement_by_constructor(base, tables["status"], tables["constructors"])
 display(q3.sort_values("mech_rate", ascending=False).groupby("era").head(10))
-""")
+"""
+)
 
-md("## 5. Feature engineering (leakage-safe)")
-code("""model_df = build_modeling_table(tables, base)
+md(
+    """## 5. Feature engineering (leakage-safe)
+
+| Feature group | Valid at cutoff because |
+|---------------|-------------------------|
+| `grid`, qualifying times/position | Set after qualifying, before race |
+| `*_before` standings | Shifted to championship state **entering** this race |
+| `podium_rate_prev` | Rolling podiums in **prior** races only |
+
+Target `podium` is derived from `positionOrder` but used only as the label, never as an input.
+"""
+)
+code(
+    """model_df = build_modeling_table(tables, base)
 save_processed(model_df, "modeling_table")
 model_df.head()
-""")
+"""
+)
 
-md("## 6. Train / validation / test split")
-code("""train_df, val_df, test_df = temporal_split(model_df)
-len(train_df), len(val_df), len(test_df)
-""")
+md(
+    """## 6. Train / validation / test split
 
-md("## 7. Preprocessing-order experiments")
-code("""prep_cmp = preprocessing_order_experiments(train_df, val_df)
-display(prep_cmp)
-""")
+**Temporal split** (no random shuffle — avoids future seasons leaking into training):
+- Train: seasons **≤ 2019**
+- Validation: **2020–2021** (COVID / format change stress-test)
+- Test: **≥ 2022** (ground-effect era, held out until final evaluation)
+"""
+)
+code(
+    """train_df, val_df, test_df = temporal_split(model_df)
+print("rows:", len(train_df), len(val_df), len(test_df))
+print("podium rate %:", train_df[TARGET].mean() * 100, val_df[TARGET].mean() * 100, test_df[TARGET].mean() * 100)
+"""
+)
 
-md("## 8. Modeling")
-code("""feats = feature_columns(train_df)
-X_train, y_train = train_df[feats], train_df[TARGET]
-X_val, y_val = val_df[feats], val_df[TARGET]
-X_test, y_test = test_df[feats], test_df[TARGET]
+md(
+    """## 7. Preprocessing experiments (≥2)
 
-lr, thr = train_logistic_regression(X_train, y_train, X_val, y_val)
-rf = train_random_forest(X_train, y_train)
+1. **Pipeline order:** median impute → scale vs scale → impute (numeric block).
+2. **Imputation statistic:** median vs mean.
+3. **Indy 500 policy:** exclude vs include championship rounds.
 
-metrics = []
-for name, model in [("logistic_regression", lr), ("random_forest", rf)]:
-    for split_name, X, y in [("train", X_train, y_train), ("val", X_val, y_val), ("test", X_test, y_test)]:
-        proba = model.predict_proba(X)[:, 1]
-        metrics.append(score_all_splits(name, y, proba, split_name, thr if name == "logistic_regression" else 0.5))
+We report validation **PR-AUC** for each variant (primary metric).
+"""
+)
+code(
+    """prep_order = preprocessing_order_experiments(train_df, val_df)
+prep_impute = imputation_strategy_experiment(train_df, val_df)
+prep_indy = indy_500_exclusion_experiment(tables)
+display(prep_order)
+display(prep_impute)
+display(prep_indy)
+"""
+)
+
+md(
+    """## 8. Modeling (≥3 attempts)
+
+1. **Baseline:** logistic regression (interpretable, strong with grid signal).
+2. **Non-linear:** random forest (200 trees, class weights).
+3. **Shallow FFNN:** 64 → 32 units, dropout 0.2 (Keras).
+
+Threshold for F1: maximized on **validation** F1 per model.
+"""
+)
+code(
+    """feats = feature_columns(train_df)
+splits = {
+    "train": (train_df[feats], train_df[TARGET]),
+    "val": (val_df[feats], val_df[TARGET]),
+    "test": (test_df[feats], test_df[TARGET]),
+}
+
+lr, lr_thr = train_logistic_regression(*splits["train"], *splits["val"])
+rf = train_random_forest(*splits["train"])
+rf_thr = pick_threshold_on_val(splits["val"][1], rf.predict_proba(splits["val"][0])[:, 1])
+
+metrics = collect_sklearn_metrics("logistic_regression", lr, splits, lr_thr)
+metrics += collect_sklearn_metrics("random_forest", rf, splits, rf_thr)
 
 try:
-    nn, nn_prep, nn_thr = train_shallow_ffnn(X_train, y_train, X_val, y_val)
-    Xt = nn_prep.transform(X_test)
-    proba = nn.predict(Xt, verbose=0).ravel()
-    metrics.append(score_all_splits("shallow_ffnn", y_test, proba, "test", nn_thr))
+    nn, nn_prep, nn_thr = train_shallow_ffnn(*splits["train"], *splits["val"])
+    metrics += collect_ffnn_metrics("shallow_ffnn", nn, nn_prep, splits, nn_thr)
 except Exception as e:
-    print("FFNN skipped (install tensorflow):", e)
+    print("FFNN skipped:", e)
 
 metrics_df = pd.DataFrame([m.__dict__ for m in metrics])
-display(metrics_df)
-""")
+metrics_df.to_csv(DATA_PROCESSED / "model_metrics.csv", index=False)
+display(metrics_df.pivot_table(index="model", columns="split", values=["roc_auc", "pr_auc", "f1"]))
+"""
+)
 
 md("## 9. Feature-group ablation")
-code("""abl = ablation_table(train_df, val_df, test_df)
+code(
+    """abl = ablation_table(train_df, val_df, test_df)
+abl.to_csv(DATA_PROCESSED / "feature_ablation.csv", index=False)
 display(abl)
-""")
+"""
+)
 
-md("## 10. Explainability (XAI)")
-code("""# Global: permutation importance on validation set
-imp = permutation_importance_table(lr, X_val, y_val)
+md(
+    """## 10. Explainability (XAI)
+
+- **Global:** permutation importance + SHAP beeswarm (validation sample).
+- **Local:** LIME for one validation row.
+
+**Causal disclaimer:** these tools describe what the model relied on for a prediction, not what *causes* a podium in the real world.
+"""
+)
+code(
+    """imp = permutation_importance_table(lr, splits["val"][0], splits["val"][1])
 display(imp.head(15))
 
 try:
     from src.xai import shap_summary
-    shap_values = shap_summary(lr, X_val.sample(min(500, len(X_val)), random_state=42))
     import shap
+
+    shap_values = shap_summary(lr, splits["val"][0].sample(min(500, len(val_df)), random_state=42))
     shap.plots.beeswarm(shap_values, max_display=15, show=False)
     plt.savefig(FIGURES_DIR / "xai_shap_beeswarm.png", bbox_inches="tight")
     plt.show()
@@ -201,25 +333,35 @@ except Exception as e:
 
 try:
     from src.xai import lime_explain_row
-    row = X_val.iloc[[0]]
-    exp = lime_explain_row(lr, row, X_train.sample(min(2000, len(X_train)), random_state=0))
+
+    row = splits["val"][0].iloc[[0]]
+    exp = lime_explain_row(lr, row, splits["train"][0].sample(min(2000, len(train_df)), random_state=0))
     exp.as_pyplot_figure()
     plt.savefig(FIGURES_DIR / "xai_lime_row0.png", bbox_inches="tight")
     plt.show()
 except Exception as e:
     print("LIME skipped:", e)
-""")
-
-md("""
-**Interpretation note:** Important features show what the model uses to predict — not proof they *cause* podiums.
-""")
+"""
+)
 
 md("## 11. Inference function demo")
-code("""complete = X_val.iloc[0].to_dict()
-partial = {k: complete[k] for k in ["grid", "year"]}
-print("Complete row:", predict_podium(lr, complete, threshold=thr, feature_names=feats))
-print("Partial row:", predict_podium(lr, partial, threshold=thr, feature_names=feats))
-""")
+code(
+    """complete = splits["val"][0].iloc[0].to_dict()
+partial = {feats[0]: complete[feats[0]]}
+print("Complete row:", predict_podium(lr, complete, threshold=lr_thr, feature_names=feats))
+print("Partial row:", predict_podium(lr, partial, threshold=lr_thr, feature_names=feats))
+"""
+)
+
+md(
+    """## 12. Known limitations
+
+- Qualifying features are sparse before the mid-1990s; grid and standings partially substitute.
+- Constructor renames break historical "team form" continuity (`constructorId` resets).
+- Sprint weekends (2021+) introduce judgment calls; we did not add sprint results as features in this baseline.
+- Class imbalance persists; PR-AUC and calibrated thresholds matter more than raw accuracy.
+"""
+)
 
 notebook = {
     "nbformat": 4,
