@@ -43,8 +43,28 @@ Hyperparameters and probability thresholds are tuned on train/validation; **test
 """)
 
 code(
-    """import sys
+    """# Kaggle auto-setup (safe locally)
+import os
+import subprocess
+import sys
 from pathlib import Path
+
+if Path("/kaggle/input").exists():
+    if not os.environ.get("F1_DATA_RAW"):
+        for _r in Path("/kaggle/input").rglob("results.csv"):
+            _d = _r.parent
+            if (_d / "circuits.csv").exists() and (_d / "races.csv").exists():
+                os.environ["F1_DATA_RAW"] = str(_d)
+                break
+    _repo = Path("/kaggle/working/f1-podium-prediction")
+    if not (_repo / "src/io.py").exists():
+        subprocess.run(
+            ["git", "clone", "--depth", "1", "https://github.com/CrimeWizard/f1-podium-prediction.git", str(_repo)],
+            check=True,
+        )
+    sys.path.insert(0, str(_repo))
+    os.chdir(_repo)
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "imbalanced-learn", "shap", "lime"], check=False)
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -94,11 +114,12 @@ DATA_PROCESSED.mkdir(parents=True, exist_ok=True)
 
 md("## 0. Load data")
 code(
-    """missing = missing_tables()
+    """from src.config import get_data_raw
+
+print("Using CSV folder:", get_data_raw())
+missing = missing_tables()
 if missing:
-    raise FileNotFoundError(
-        "Place Kaggle CSV files in data/raw. Missing: " + ", ".join(missing)
-    )
+    raise FileNotFoundError("Missing: " + ", ".join(missing))
 
 tables = load_raw_tables()
 list(tables.keys())
