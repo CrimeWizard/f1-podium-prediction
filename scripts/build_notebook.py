@@ -100,6 +100,7 @@ from src.train import (
     collect_sklearn_metrics,
     feature_columns,
     train_logistic_regression,
+    compare_random_forest_overfitting,
     train_random_forest,
     train_shallow_ffnn,
     pick_threshold_on_val,
@@ -317,6 +318,23 @@ except Exception as e:
 metrics_df = pd.DataFrame([m.__dict__ for m in metrics])
 metrics_df.to_csv(DATA_PROCESSED / "model_metrics.csv", index=False)
 display(metrics_df.pivot_table(index="model", columns="split", values=["roc_auc", "pr_auc", "f1"]))
+"""
+)
+
+md(
+    """## 8b. Random forest — overfitting experiment
+
+Default RF can memorize the training era (very high train PR-AUC). We compare a **regularized** forest:
+`max_depth=12`, `min_samples_leaf=25`, `max_samples=0.7`, `max_features="sqrt"`.
+
+**Goal:** lower train–val gap without hurting **validation PR-AUC** (primary metric).
+"""
+)
+code(
+    """rf_cmp = compare_random_forest_overfitting(splits)
+rf_cmp.to_csv(DATA_PROCESSED / "rf_regularization_comparison.csv", index=False)
+display(rf_cmp.pivot_table(index="model", columns="split", values="pr_auc"))
+display(rf_cmp.groupby("model")["train_minus_val_pr_auc"].first().rename("train_minus_val_pr_auc"))
 """
 )
 

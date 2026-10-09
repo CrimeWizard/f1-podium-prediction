@@ -91,6 +91,60 @@ def train_random_forest(X_train, y_train) -> Pipeline:
     return pipe
 
 
+def train_random_forest_regularized(X_train, y_train) -> Pipeline:
+    """RF with depth/sample limits to reduce train memorization (tune on val only)."""
+    pipe = Pipeline([
+        ("prep", build_preprocessor(X_train)),
+        (
+            "clf",
+            RandomForestClassifier(
+                n_estimators=200,
+                max_depth=12,
+                min_samples_leaf=25,
+                min_samples_split=40,
+                max_samples=0.7,
+                max_features="sqrt",
+                class_weight="balanced_subsample",
+                random_state=42,
+                n_jobs=-1,
+            ),
+        ),
+    ])
+    pipe.fit(X_train, y_train)
+    return pipe
+
+
+def compare_random_forest_overfitting(
+    splits: Dict[str, Tuple[pd.DataFrame, pd.Series]],
+) -> pd.DataFrame:
+    """Default vs regularized RF — train/val/test PR-AUC and train-val gap."""
+    rows = []
+    for label, trainer in (
+        ("random_forest_default", train_random_forest),
+        ("random_forest_regularized", train_random_forest_regularized),
+    ):
+        model = trainer(*splits["train"])
+        thr = pick_threshold_on_val(splits["val"][1], model.predict_proba(splits["val"][0])[:, 1])
+        for split_name in ("train", "val", "test"):
+            X, y = splits[split_name]
+            proba = model.predict_proba(X)[:, 1]
+            roc, pr, f1 = evaluate_probs(y, proba, thr)
+            rows.append({
+                "model": label,
+                "split": split_name,
+                "roc_auc": roc,
+                "pr_auc": pr,
+                "f1": f1,
+                "threshold": thr,
+            })
+    out = pd.DataFrame(rows)
+    pivot = out.pivot(index="model", columns="split", values="pr_auc")
+    out["train_minus_val_pr_auc"] = out["model"].map(
+        lambda m: float(pivot.loc[m, "train"] - pivot.loc[m, "val"])
+    )
+    return out
+
+
 def train_shallow_ffnn(X_train, y_train, X_val, y_val):
     """Returns fitted Keras model + preprocessor + threshold. Requires tensorflow."""
     from tensorflow import keras
