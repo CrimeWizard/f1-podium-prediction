@@ -17,18 +17,28 @@ def raw_table_paths(raw_dir: Path | None = None) -> Dict[str, Path]:
 
 
 def missing_tables(raw_dir: Path | None = None) -> list[str]:
+    from src.kaggle_bootstrap import bootstrap_kaggle
+
+    bootstrap_kaggle()
     paths = raw_table_paths(raw_dir)
     return [k for k, p in paths.items() if not p.exists()]
 
 
 def load_raw_tables(raw_dir: Path | None = None) -> Dict[str, pd.DataFrame]:
+    from src.kaggle_bootstrap import bootstrap_kaggle
+
+    bootstrap_kaggle()
     root = raw_dir or get_data_raw()
     missing = missing_tables(root)
     if missing:
+        hint = (
+            "On Kaggle: Add data → Formula 1 World Championship (CSV dataset). "
+            "Then enable Internet and re-run from the top."
+            if Path("/kaggle/input").exists()
+            else "Download CSVs into data/raw (see README)."
+        )
         raise FileNotFoundError(
-            "Missing CSV tables in data/raw: "
-            + ", ".join(missing)
-            + ". See README.md for download steps."
+            f"Missing tables under {root}: " + ", ".join(missing) + ". " + hint
         )
     tables: Dict[str, pd.DataFrame] = {}
     for name, path in raw_table_paths(root).items():
