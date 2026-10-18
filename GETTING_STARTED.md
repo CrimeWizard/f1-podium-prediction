@@ -158,7 +158,7 @@ More detail: [docs/KAGGLE.md](docs/KAGGLE.md)
 
 1. Public **GitHub** repo link (this repository)  
 2. Public **Kaggle notebook** link (after successful Run All)  
-3. **PDF report** (from `docs/ANALYTICAL_REPORT.md` + your team’s interpretation)  
+3. **PDF report** ([docs/MILESTONE1_SUBMISSION_REPORT.pdf](docs/MILESTONE1_SUBMISSION_REPORT.pdf))  
 4. Form: https://forms.gle/esDxHsvfzffYHVAZ9 — **18 Oct 2026, 11:59 PM**
 
 ---

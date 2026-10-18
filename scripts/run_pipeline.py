@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
 """Run full milestone pipeline (for Kaggle: python scripts/run_pipeline.py)."""
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
 from src.kaggle_bootstrap import bootstrap_kaggle
 from src.io import load_raw_tables, save_processed
 from src.cleaning import build_base_results_table

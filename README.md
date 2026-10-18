@@ -8,10 +8,12 @@ Predict whether each driver finishes **on the podium** (`positionOrder ≤ 3`) u
 
 | Doc | Purpose |
 |-----|---------|
+| [docs/MILESTONE1_SUBMISSION_REPORT.pdf](docs/MILESTONE1_SUBMISSION_REPORT.pdf) | **Final Submission Report (PDF)** |
+| [docs/MILESTONE1_SUBMISSION_REPORT.md](docs/MILESTONE1_SUBMISSION_REPORT.md) | **Final Submission Report (Markdown)** |
 | [GETTING_STARTED.md](GETTING_STARTED.md) | **Step-by-step run guide** for teammates |
 | [docs/KAGGLE_QUICKFIX.md](docs/KAGGLE_QUICKFIX.md) | One-cell Kaggle smoke test |
 | [docs/KAGGLE.md](docs/KAGGLE.md) | Full Kaggle upload flow |
-| [docs/ANALYTICAL_REPORT.md](docs/ANALYTICAL_REPORT.md) | Report draft (export to PDF) |
+| [docs/ANALYTICAL_REPORT.md](docs/ANALYTICAL_REPORT.md) | Report draft skeleton |
 | [docs/REPORT_OUTLINE.md](docs/REPORT_OUTLINE.md) | Report section checklist |
 
 ## One-minute local run
@@ -25,9 +27,10 @@ Then follow **[GETTING_STARTED.md](GETTING_STARTED.md)** — Path A.
 
 ## Submission
 
-- GitHub: this repo (public)
-- Kaggle: public notebook after **Run All**
-- PDF report + form: https://forms.gle/esDxHsvfzffYHVAZ9 (deadline **18 Oct 2026**)
+- GitHub: https://github.com/CrimeWizard/f1-podium-prediction (public)
+- Kaggle: https://www.kaggle.com/code/crimewizard/acl-ms1 (public notebook after **Run All**)
+- PDF report: [docs/MILESTONE1_SUBMISSION_REPORT.pdf](docs/MILESTONE1_SUBMISSION_REPORT.pdf)
+- Submission Form: https://forms.gle/esDxHsvfzffYHVAZ9 (deadline **18 Oct 2026, 11:59 PM**)
 
 ## Metrics & split
 
