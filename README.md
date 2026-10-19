@@ -13,7 +13,7 @@ Predict whether each driver finishes **on the podium** (`positionOrder ≤ 3`) u
 
 | Doc | Purpose |
 |-----|---------|
-| [docs/MILESTONE1_SUBMISSION_REPORT.pdf](docs/MILESTONE1_SUBMISSION_REPORT.pdf) | Previous report from Kaggle Version 6; refresh after the updated notebook run |
+| [docs/MILESTONE1_SUBMISSION_REPORT.pdf](docs/MILESTONE1_SUBMISSION_REPORT.pdf) | Final report from successful Kaggle Version 7 run |
 | [docs/MILESTONE1_SUBMISSION_REPORT.md](docs/MILESTONE1_SUBMISSION_REPORT.md) | Source for the final report |
 | [GETTING_STARTED.md](GETTING_STARTED.md) | **Step-by-step run guide** for teammates |
 | [docs/KAGGLE_QUICKFIX.md](docs/KAGGLE_QUICKFIX.md) | One-cell Kaggle smoke test |
@@ -33,8 +33,8 @@ Then follow **[GETTING_STARTED.md](GETTING_STARTED.md)** — Path A.
 ## Submission
 
 - GitHub: https://github.com/CrimeWizard/f1-podium-prediction (public)
-- Kaggle: https://www.kaggle.com/code/crimewizard/acl-ms1 (Version 6 completed successfully; the updated source adds threshold metrics and a PR-AUC comparison plot, so rerun before submission)
-- PDF report: refresh after the updated Kaggle run before uploading.
+- Kaggle: https://www.kaggle.com/code/crimewizard/acl-ms1 (Version 7 completed successfully (113.1 seconds; 110 output files); source revision 3f5da97)
+- PDF report: regenerated from the successful Kaggle Version 7 export.
 - Submission form: https://forms.gle/esDxHsvfzffYHVAZ9
 
 ## Metrics & split

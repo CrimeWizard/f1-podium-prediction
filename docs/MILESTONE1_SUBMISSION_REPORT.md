@@ -1,6 +1,6 @@
 # Milestone 1 Submission Report - F1 Podium Prediction
 
-**Run provenance:** Kaggle notebook `ACL_MS1`, Version 6 of 6; successful 99.7-second run with 110 output files. Source revision `7a540b3`; Formula 1 World Championship dataset (1950-2024). Live metrics below were checked against the Kaggle Version 6 page. The PDF embeds notebook-rendered plots.
+**Run provenance:** Kaggle notebook `ACL_MS1`, Version 7 of 7; successful 113.1-second run with 110 output files. Source revision `3f5da97`; Formula 1 World Championship dataset (1950-2024). The PDF figures and metrics were extracted from the saved Version 7 Kaggle notebook.
 
 **Course:** Introduction to Artificial Intelligence - Milestone 1  
 **Team representative:** Youssef Ahmed  
@@ -11,7 +11,7 @@
 
 ## Summary
 
-The task predicts whether a driver finishes on the podium from information available after qualifying and before the race. The temporal split is train through 2019 (24,148 rows), validation 2020-2021 (780), and test 2022-2024 (1,359). The regularized random forest achieved the highest held-out test PR-AUC (0.696); shallow FFNN had highest validation PR-AUC (0.736).
+The task predicts whether a driver finishes on the podium from information available after qualifying and before the race. The temporal split is train through 2019 (24,148 rows), validation 2020-2021 (780), and test 2022-2024 (1,359). The regularized random forest achieved the highest test PR-AUC (0.696); the shallow FFNN achieved the highest validation PR-AUC (0.743).
 
 ## Data and engineering
 
@@ -25,24 +25,24 @@ Q3's highest mechanical-retirement rates: Caterham 2014-2021, 11/34 (32.4%); RB 
 
 ## Modeling and results
 
-The target is `positionOrder <= 3`. Features include grid, qualifying, standings shifted to before the race, and prior-race podium form. Post-race fields are excluded. PR-AUC is primary; F1 thresholds are selected on validation data.
+The target is `positionOrder <= 3`. Features include grid, qualifying, standings shifted to before the race, and prior-race podium form. Post-race fields are excluded. PR-AUC is primary; thresholds are selected using validation data. The notebook reports ROC-AUC, PR-AUC, F1, accuracy, precision, and recall for train, validation, and test; the last four are computed at the validation-selected threshold.
 
-| Model | Split | PR-AUC | ROC-AUC | F1 |
-|---|---|---:|---:|---:|
-| Logistic regression | Train | 0.536977 | 0.891370 | 0.559466 |
-| Logistic regression | Validation | 0.700900 | 0.918114 | 0.687747 |
-| Logistic regression | Test | 0.661004 | 0.924586 | 0.666667 |
-| Random forest (default) | Train | 0.975409 | 0.997616 | 0.953463 |
-| Random forest (default) | Validation | 0.685899 | 0.912751 | 0.689956 |
-| Random forest (default) | Test | 0.648018 | 0.925040 | 0.640964 |
-| Random forest (regularized) | Train | 0.627737 | 0.924204 | 0.594472 |
-| Random forest (regularized) | Validation | 0.707244 | 0.923670 | 0.704348 |
-| Random forest (regularized) | Test | 0.696453 | 0.933499 | 0.641975 |
-| Shallow FFNN | Train | 0.576309 | 0.903944 | 0.554541 |
-| Shallow FFNN | Validation | 0.735562 | 0.908213 | 0.719298 |
-| Shallow FFNN | Test | 0.667145 | 0.924357 | 0.643192 |
+| Model | Split | PR-AUC | ROC-AUC | F1 | Accuracy | Precision | Recall |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Logistic regression | Train | 0.536977 | 0.891370 | 0.559466 | 0.879742 | 0.518852 | 0.606978 |
+| Logistic regression | Validation | 0.700900 | 0.918114 | 0.687747 | 0.898718 | 0.639706 | 0.743590 |
+| Logistic regression | Test | 0.661004 | 0.924586 | 0.666667 | 0.883738 | 0.585185 | 0.774510 |
+| Random forest (default) | Train | 0.975409 | 0.997616 | 0.953463 | 0.987784 | 0.915480 | 0.994733 |
+| Random forest (default) | Validation | 0.685899 | 0.912751 | 0.689956 | 0.908974 | 0.705357 | 0.675214 |
+| Random forest (default) | Test | 0.648018 | 0.925040 | 0.640964 | 0.890361 | 0.630332 | 0.651961 |
+| Random forest (regularized) | Train | 0.627737 | 0.924204 | 0.594472 | 0.896720 | 0.587404 | 0.601712 |
+| Random forest (regularized) | Validation | 0.707244 | 0.923670 | 0.704348 | 0.912821 | 0.716814 | 0.692308 |
+| Random forest (regularized) | Test | 0.696453 | 0.933499 | 0.641975 | 0.893304 | 0.646766 | 0.637255 |
+| Shallow FFNN | Train | 0.579885 | 0.904390 | 0.572466 | 0.887858 | 0.550061 | 0.596774 |
+| Shallow FFNN | Validation | 0.743255 | 0.909257 | 0.715517 | 0.915385 | 0.721739 | 0.709402 |
+| Shallow FFNN | Test | 0.662440 | 0.926360 | 0.668182 | 0.892568 | 0.622881 | 0.720588 |
 
-Preprocessing comparisons include impute-then-scale vs scale-then-impute, median vs mean imputation, and inclusion/exclusion of Indianapolis 500. Feature ablation removes grid, qualifying, standings, and form groups in turn. Explainability includes permutation importance, SHAP and LIME. The inference demo covers complete and partial input rows.
+The PDF includes the notebook's PR-AUC-by-model-and-split chart, in addition to EDA, engineering-question, feature-ablation, permutation-importance, SHAP, and LIME plots. Preprocessing comparisons include impute-then-scale vs scale-then-impute, median vs mean imputation, and inclusion/exclusion of Indianapolis 500. Feature ablation removes grid, qualifying, standings, and form groups. The inference demo covers complete and partial input rows.
 
 ## Limitations
 
