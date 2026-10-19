@@ -12,6 +12,9 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     average_precision_score,
     f1_score,
+    accuracy_score,
+    precision_score,
+    recall_score,
     precision_recall_curve,
     roc_auc_score,
 )
@@ -31,6 +34,9 @@ class MetricRow:
     roc_auc: float
     pr_auc: float
     f1: float
+    accuracy: float
+    precision: float
+    recall: float
 
 
 def feature_columns(df: pd.DataFrame) -> List[str]:
@@ -58,7 +64,7 @@ def build_preprocessor(X: pd.DataFrame) -> ColumnTransformer:
 def evaluate_probs(y_true: np.ndarray, proba: np.ndarray, threshold: float = 0.5) -> Tuple[float, float, float]:
     roc = roc_auc_score(y_true, proba)
     pr = average_precision_score(y_true, proba)
-    f1 = f1_score(y_true, (proba >= threshold).astype(int))
+    f1 = f1_score(y_true, (proba >= threshold).astype(int), zero_division=0)
     return roc, pr, f1
 
 
@@ -129,12 +135,16 @@ def compare_random_forest_overfitting(
             X, y = splits[split_name]
             proba = model.predict_proba(X)[:, 1]
             roc, pr, f1 = evaluate_probs(y, proba, thr)
+            predicted = (proba >= thr).astype(int)
             rows.append({
                 "model": label,
                 "split": split_name,
                 "roc_auc": roc,
                 "pr_auc": pr,
                 "f1": f1,
+                "accuracy": accuracy_score(y, predicted),
+                "precision": precision_score(y, predicted, zero_division=0),
+                "recall": recall_score(y, predicted, zero_division=0),
                 "threshold": thr,
             })
     out = pd.DataFrame(rows)
@@ -168,8 +178,18 @@ def train_shallow_ffnn(X_train, y_train, X_val, y_val):
 
 def score_all_splits(name: str, y, proba, split_name: str, threshold: float) -> MetricRow:
     roc, pr, _ = evaluate_probs(y, proba, threshold)
-    f1 = f1_score(y, (proba >= threshold).astype(int))
-    return MetricRow(name, split_name, roc, pr, f1)
+    predicted = (proba >= threshold).astype(int)
+    f1 = f1_score(y, predicted, zero_division=0)
+    return MetricRow(
+        name,
+        split_name,
+        roc,
+        pr,
+        f1,
+        accuracy_score(y, predicted),
+        precision_score(y, predicted, zero_division=0),
+        recall_score(y, predicted, zero_division=0),
+    )
 
 
 def collect_sklearn_metrics(

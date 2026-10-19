@@ -1,138 +1,49 @@
-# Analytical Report — F1 Podium Prediction (GUC Milestone 1)
+# Milestone 1 Submission Report - F1 Podium Prediction
 
-> **Refresh required before submission.** This report and its PDF reflect the earlier Kaggle Version 2 outputs. The corrected notebook now changes Q1/Q2/Q3 denominators and adds required report evidence. Re-run the current Kaggle notebook and regenerate this report and PDF from that run before uploading.
+**Run provenance:** Kaggle notebook `ACL_MS1`, Version 6 of 6; successful 99.7-second run with 110 output files. Source revision `7a540b3`; Formula 1 World Championship dataset (1950-2024). Live metrics below were checked against the Kaggle Version 6 page. The PDF embeds notebook-rendered plots.
 
-**Course:** Introduction to Artificial Intelligence — Milestone 1 (F1 Podium Prediction)
-
-**Team:**
-
-| Name | Student ID | Tutorial |
-|------|------------|----------|
-| Youssef Ahmed | 58-4250 | T-27 |
-| Omar Eldafrawy | 58-5371 | T-11 |
-| Ismail Almoatazbellah | 58-4720 | T-16 |
-| Mohamed Elayadi | 43-2918 | T-22 |
-
+**Course:** Introduction to Artificial Intelligence - Milestone 1  
+**Team representative:** Youssef Ahmed  
+**Team:** Youssef Ahmed (58-4250, T-27); Omar Eldafrawy (58-5371, T-11); Ismail Almoatazbellah (58-4720, T-16); Mohamed Elayadi (43-2918, T-22)  
+**Notebook:** https://www.kaggle.com/code/crimewizard/acl-ms1  
 **GitHub:** https://github.com/CrimeWizard/f1-podium-prediction  
-**Kaggle notebook:** https://www.kaggle.com/code/crimewizard/acl-ms1  
-**Dataset:** Ergast F1 CSVs (Kaggle: rohanrao/formula-1-world-championship-1950-2020)
+**Dataset:** Formula 1 World Championship, Ergast-derived tables, 1950-2024.
 
----
+## Summary
 
-## 1. Introduction
+The task predicts whether a driver finishes on the podium from information available after qualifying and before the race. The temporal split is train through 2019 (24,148 rows), validation 2020-2021 (780), and test 2022-2024 (1,359). The regularized random forest achieved the highest held-out test PR-AUC (0.696); shallow FFNN had highest validation PR-AUC (0.736).
 
-**Task.** For each driver in each race (grain: `raceId`, `driverId`), predict whether the driver finishes **on the podium** (finishing position `positionOrder` in {1, 2, 3}).
+## Data and engineering
 
-**Prediction cutoff.** Features use only information available **after qualifying and before the race** (grid, qualifying times/position, championship standings entering the race, recent form from **prior** races). We do not use post-race fields (race points, status, pit stops, lap times, or standings updated by the current race) as model inputs.
+Fourteen relational CSV tables were audited. Primary-key audits found zero duplicate or null keys; checked foreign-key relationships found zero orphan or null references. Duplicate driver-race entries were resolved by best (lowest) `positionOrder`: 176 duplicate rows in the full analysis base and 131 in the modeling base. Indianapolis 500 rounds are retained for Q1-Q3 and excluded only from the main modeling table; sensitivity results are reported.
 
-**Evaluation.** Primary metric: **PR-AUC** (podium is a minority class). Secondary: ROC-AUC and F1 at a probability threshold tuned on **validation** only. Train/validation/test is a **temporal split**: train seasons <= 2019, validation 2020–2021, test >= 2022.
+Q1 compares qualifying front row and actual-grid front row separately, excludes 1,601 explicit non-starters, and requires at least 20 starts per circuit/era. Highest observed conversion: Magny-Cours pre-2014 actual grid 29/36 (80.6%); Yas Marina from 2014 actual grid 19/22 (86.4%); Suzuka pre-2014 qualifying 20/26 (76.9%); Monaco from 2014 qualifying 17/20 (85.0%). Paired rank correlations over seven shared circuits: -0.180 actual grid, -0.291 qualifying.
 
----
+Q2 defines home as normalized driver nationality matching circuit country. Rates by grid bin (home vs away): 1-5, 45.8% (430) vs 45.2% (5,180); 6-10, 9.6% (479) vs 11.4% (5,126); 11-15, 3.4% (469) vs 3.0% (5,117); 16+, 0.8% (933) vs 0.7% (7,203). Direction varies, so there is no consistent advantage after grid control. Zero/missing-grid exclusions: 130; unknown-country exclusions: 0.
 
-## 2. EDA and cleaning
+Q3's highest mechanical-retirement rates: Caterham 2014-2021, 11/34 (32.4%); RB F1 Team 2022-2024, 5/48 (10.4%). Rates are descriptive and denominators modest.
 
-**Figure provenance.** The corrected Q2 figure is copied from the public Kaggle notebook output (`crimewizard/acl-ms1`, saved version 2, kernel version `360186961`). The remaining report figures are from its earlier successful Kaggle run (kernel version `359399439`).
+## Modeling and results
 
-**EDA before cleaning.** We inspected raw `positionOrder` in `results` to confirm finish positions are usable for the target. We plotted mean qualifying rows per race by year; the `qualifying` table is empty for early decades and becomes dense from the mid-1990s onward, so quali features are often missing for old seasons.
+The target is `positionOrder <= 3`. Features include grid, qualifying, standings shifted to before the race, and prior-race podium form. Post-race fields are excluded. PR-AUC is primary; F1 thresholds are selected on validation data.
 
-![Raw finishing-position distribution](../outputs/figures/eda_position_order_raw.png)
+| Model | Split | PR-AUC | ROC-AUC | F1 |
+|---|---|---:|---:|---:|
+| Logistic regression | Train | 0.536977 | 0.891370 | 0.559466 |
+| Logistic regression | Validation | 0.700900 | 0.918114 | 0.687747 |
+| Logistic regression | Test | 0.661004 | 0.924586 | 0.666667 |
+| Random forest (default) | Train | 0.975409 | 0.997616 | 0.953463 |
+| Random forest (default) | Validation | 0.685899 | 0.912751 | 0.689956 |
+| Random forest (default) | Test | 0.648018 | 0.925040 | 0.640964 |
+| Random forest (regularized) | Train | 0.627737 | 0.924204 | 0.594472 |
+| Random forest (regularized) | Validation | 0.707244 | 0.923670 | 0.704348 |
+| Random forest (regularized) | Test | 0.696453 | 0.933499 | 0.641975 |
+| Shallow FFNN | Train | 0.576309 | 0.903944 | 0.554541 |
+| Shallow FFNN | Validation | 0.735562 | 0.908213 | 0.719298 |
+| Shallow FFNN | Test | 0.667145 | 0.924357 | 0.643192 |
 
-![Qualifying coverage by year](../outputs/figures/eda_qualifying_coverage_by_year.png)
+Preprocessing comparisons include impute-then-scale vs scale-then-impute, median vs mean imputation, and inclusion/exclusion of Indianapolis 500. Feature ablation removes grid, qualifying, standings, and form groups in turn. Explainability includes permutation importance, SHAP and LIME. The inference demo covers complete and partial input rows.
 
-**Cleaning.** Missing sentinels (`\N`) are parsed as NA. We enforce **one row per (`raceId`, `driverId`)**, keeping the best `positionOrder` when shared-drive duplicates exist. **Indianapolis 500** championship rounds (1950–1960) are excluded from the main modeling base as non-comparable ovals. Primary and foreign key audits are reported in notebook section 2.
+## Limitations
 
-**EDA after cleaning.** We confirm podium rate by year on the cleaned table (notebook section 3).
-
-![Podium rate by season](../outputs/figures/eda_podium_rate_by_year.png)
-
----
-
-## 3. Data-engineering questions
-
-**Q1 — Front row to podium by circuit.** Front row = **grid** positions 1–2. We compare podium rates by circuit, split pre-2014 vs from-2014 (hybrid era). See notebook section 4 and figure `de_q1_front_row_podium.png`.
-
-**Q2 — Home race advantage.** We compare podium rate for **home** vs **away** drivers within **grid bins**, so better qualifying is not confounded with home effect. See `de_q2_home_advantage.png`.
-
-![Home race advantage by grid bin](../outputs/figures/de_q2_home_advantage.png)
-
-**Q3 — Mechanical retirement by constructor.** Ergast status strings are mapped to categories (`src/status_mapping.py`). Mechanical DNFs are counted per constructor for grid > 0 starts, comparing 2014–2021 vs 2022–2024. Status category counts and tables are in notebook section 4.
-
-![Front-row podium rates by circuit and era](../outputs/figures/de_q1_front_row_podium.png)
-
----
-
-## 4. Features (leakage-safe)
-
-| Feature | Meaning |
-|---------|---------|
-| `grid` | Starting position on race day |
-| `quali_position`, `q1_sec`, `q2_sec`, `q3_sec` | Qualifying result (sparse before ~1995 in data) |
-| `points_before`, `position_before` | Driver championship standing **before** this race |
-| `constructor_points_before`, `constructor_position_before` | Constructor standing before race |
-| `podium_rate_prev` | Share of podiums in prior races (rolling, excludes current race) |
-
-IDs (`raceId`, `driverId`, etc.) and `year` are not used as model inputs.
-
----
-
-## 5. Preprocessing experiments (>= 2)
-
-On validation PR-AUC we compared: (1) impute-then-scale vs scale-then-impute, (2) median vs mean imputation, (3) excluding vs including Indianapolis 500 rounds. Results are in notebook section 7.
-
----
-
-## 6. Modeling (>= 3 attempts)
-
-Models: (1) logistic regression baseline, (2) random forest (200 trees, class weights), (3) shallow feed-forward neural network (64-32, dropout). Metrics from the successful Kaggle run (`acl-ms1`, saved version 2, Oct 19, 2026):
-
-**PR-AUC (primary):**
-
-| Model | Train | Val | Test |
-|-------|-------|-----|------|
-| Logistic regression | 0.546 | 0.707 | 0.669 |
-| Random forest (default) | 0.998 | 0.696 | 0.675 |
-| Shallow FFNN | 0.580 | 0.724 | 0.664 |
-
-Default random forest **overfits** (train PR-AUC ~0.99). A **regularized** forest (`max_depth=12`, larger `min_samples_leaf`, `max_samples=0.7`) yields train 0.630, val 0.718, **test 0.694**, reducing the train-val gap. See notebook section 8b.
-
-**Interpretation.** All models beat a naive baseline on PR-AUC; test performance is similar across methods (~0.66–0.69), reflecting hard-to-predict race-day uncertainty. We report **test** metrics once, after choosing thresholds on validation.
-
----
-
-## 7. Feature ablation
-
-Dropping feature groups (logistic baseline) on validation/test PR-AUC is in notebook section 9 (`feature_ablation.csv`). Grid removal hurts test PR-AUC most, consistent with grid being a strong pre-race signal.
-
----
-
-## 8. Explainability (XAI)
-
-We report permutation importance, SHAP (global), and LIME (one validation row). **Disclaimer:** these show what the model relied on for predictions, not causal effects on real-world podiums.
-
-![SHAP global feature importance](../outputs/figures/xai_shap_beeswarm.png)
-
-![LIME explanation for one validation example](../outputs/figures/xai_lime_row0.png)
-
----
-
-## 9. Limitations
-
-- Qualifying features missing for many early seasons in Ergast.
-- Rule and car changes across eras (temporal test set 2022+).
-- Constructor renames and `constructorId` changes.
-- Sprint weekends not modeled with sprint-specific features.
-- Class imbalance; accuracy is misleading vs PR-AUC.
-
----
-
-## 10. Inference
-
-`src/inference.py` returns podium probability and a binary prediction for a single pre-race row; notebook section 11 demonstrates a complete row and a partial row with imputation.
-
----
-
-## References
-
-- Ergast / Kaggle F1 CSV documentation  
-- Course Milestone 1 specification and newcomer materials  
-- Repository README and `GETTING_STARTED.md`
+Qualifying coverage is sparse in early seasons; constructor identities change; sprint-specific features are not included; mechanical status is inferred from labels without an independent starter flag. Results and explainability are descriptive, not causal. Circuit and constructor leaders have modest denominators.

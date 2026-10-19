@@ -417,7 +417,7 @@ md(
 2. **Non-linear:** random forest (200 trees, class weights).
 3. **Shallow FFNN:** 64 → 32 units, dropout 0.2 (Keras).
 
-Threshold for F1: maximized on **validation** F1 per model.
+We report ROC-AUC, PR-AUC, F1, accuracy, precision, and recall for train/validation/test. The brief explicitly defines ROC-AUC, PR-AUC, and F1, then refers to “five metrics”; these additional standard metrics safely cover that wording. Threshold-dependent metrics (F1, accuracy, precision, recall) use the threshold selected by validation F1 per model.
 """
 )
 code(
@@ -443,7 +443,7 @@ except Exception as e:
 
 metrics_df = pd.DataFrame([m.__dict__ for m in metrics])
 metrics_df.to_csv(DATA_PROCESSED / "model_metrics.csv", index=False)
-display(metrics_df.pivot_table(index="model", columns="split", values=["roc_auc", "pr_auc", "f1"]))
+display(metrics_df.pivot_table(index="model", columns="split", values=["roc_auc", "pr_auc", "f1", "accuracy", "precision", "recall"]))
 """
 )
 
@@ -463,11 +463,20 @@ display(rf_cmp.pivot_table(index="model", columns="split", values="pr_auc"))
 display(rf_cmp.groupby("model")["train_minus_val_pr_auc"].first().rename("train_minus_val_pr_auc"))
 rf_regularized_metrics = rf_cmp.loc[
     rf_cmp["model"] == "random_forest_regularized",
-    ["model", "split", "roc_auc", "pr_auc", "f1"],
+    ["model", "split", "roc_auc", "pr_auc", "f1", "accuracy", "precision", "recall"],
 ]
 metrics_df = pd.concat([metrics_df, rf_regularized_metrics], ignore_index=True)
 metrics_df.to_csv(DATA_PROCESSED / "model_metrics.csv", index=False)
-display(metrics_df.pivot_table(index="model", columns="split", values=["roc_auc", "pr_auc", "f1"]))
+display(metrics_df.pivot_table(index="model", columns="split", values=["roc_auc", "pr_auc", "f1", "accuracy", "precision", "recall"]))
+
+pr_auc_plot = metrics_df.pivot(index="model", columns="split", values="pr_auc").reindex(columns=["train", "val", "test"])
+ax = pr_auc_plot.plot(kind="bar", figsize=(10, 5), ylim=(0, 1), title="PR-AUC by model and split")
+ax.set_ylabel("PR-AUC")
+ax.set_xlabel("Model")
+plt.xticks(rotation=20, ha="right")
+plt.tight_layout()
+plt.savefig(FIGURES_DIR / "model_pr_auc_comparison.png", bbox_inches="tight")
+plt.show()
 """
 )
 
