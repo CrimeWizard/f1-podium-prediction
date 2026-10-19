@@ -77,7 +77,7 @@ if not (ROOT / "src").exists():
 sys.path.insert(0, str(ROOT))
 
 from src.audit import audit_foreign_keys, audit_primary_keys
-from src.cleaning import build_base_results_table
+from src.cleaning import build_base_results_table, exclude_indianapolis_500
 from src.config import DATA_PROCESSED, FIGURES_DIR
 from src.de_analysis import (
     question1_front_row_podium_by_circuit,
@@ -181,7 +181,9 @@ base, duplicate_audit = build_base_results_table(
     exclude_indy=True,
     dedupe_policy="best_position_order",
 )
-print("Duplicate (raceId, driverId) rows before policy:", len(duplicate_audit))
+raw_model_scope = exclude_indianapolis_500(tables["results"], tables["races"])
+print("Rows involved in duplicate driver-race groups:", len(duplicate_audit))
+print("Extra rows removed by deduplication in the modeling scope:", len(raw_model_scope) - len(base))
 assert base.duplicated(["raceId", "driverId"]).sum() == 0
 save_processed(base, "base_results")
 """
@@ -191,10 +193,19 @@ md("## 3. EDA (after cleaning)")
 code(
     """fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 4.5))
 
-# Panel 1: Direct comparison of positionOrder before vs after cleaning
-results_raw["positionOrder"].hist(bins=30, ax=ax1, alpha=0.55, color="#e74c3c", label="Raw results (before cleaning)")
-base["positionOrder"].hist(bins=30, ax=ax1, alpha=0.55, color="#2ecc71", label="Cleaned modeling base (1 row per driver-race)")
-ax1.set_title("Direct comparison: positionOrder before vs after cleaning")
+# Panel 1: compare the same non-Indy population before and after deduplication.
+# The modeling base excludes Indy 500 rounds, so remove those same races from
+# the raw side; otherwise this plot would mix Indy exclusion with deduplication.
+raw_model_scope["positionOrder"].hist(
+    bins=30, ax=ax1, alpha=0.55, color="#e74c3c",
+    label=f"Non-Indy raw entries (n={len(raw_model_scope):,})",
+)
+base["positionOrder"].hist(
+    bins=30, ax=ax1, alpha=0.55, color="#2ecc71",
+    label=f"After deduplication (n={len(base):,})",
+)
+rows_removed = len(raw_model_scope) - len(base)
+ax1.set_title(f"positionOrder before and after deduplication ({rows_removed} rows removed)")
 ax1.set_xlabel("positionOrder")
 ax1.set_ylabel("Frequency")
 ax1.legend()

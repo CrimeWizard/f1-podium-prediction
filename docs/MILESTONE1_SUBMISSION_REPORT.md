@@ -30,7 +30,7 @@ This project builds an end-to-end, leakage-safe machine learning pipeline to pre
 
 - **Ingestion & Sentinels:** 14 relational CSV tables loaded immutably. Sentinels (literal `\N`) converted to nulls; dates parsed to datetimes; qualifying times parsed to numeric seconds.
 - **Key Audits:** Primary keys verified 100% unique and non-null across all 14 tables (0 violations). Checked 23 foreign-key relationships; 0 orphan rows and 0 broken links.
-- **Shared-Drive Reconciliation:** 1950s car swaps mid-race produced duplicate `(raceId, driverId)` rows. Found 176 duplicate rows in the full dataset (131 when excluding the non-championship Indianapolis 500 rounds). Kept the row with the best (lowest) `positionOrder`.
+- **Shared-Drive Reconciliation:** 1950s car swaps mid-race produced duplicate `(raceId, driverId)` rows. Across the full dataset, 176 rows belonged to duplicate-key groups and deduplication removed 91 extra rows. In the modeling population (excluding Indianapolis 500 rounds), 131 rows belonged to duplicate-key groups and deduplication removed 67 extra rows. Kept the row with the best (lowest) `positionOrder`.
 - **Final Modeling Table:** 26,287 unique driver-race records.
 
 ---
@@ -39,7 +39,7 @@ This project builds an end-to-end, leakage-safe machine learning pipeline to pre
 
 - **Pre-Cleaning Diagnostic Scope:** Raw finishing position distribution (Figure 1) inspects initial spread across finishing positions. Figure 2 charts historical drift in qualifying row coverage per race, showing electronic session lap times are absent prior to the mid-1990s.
 - **Direct Impact of Data Cleaning (Figure 3):**
-  - *(Left Panel)* Direct before-and-after comparison of `positionOrder` distributions directly visualizes the effect of cleaning, demonstrating the elimination of 176 shared-drive duplicate records (131 excluding non-championship Indy 500 rounds) to enforce a strict 1-to-1 driver-race grain.
+  - *(Left Panel)* Compares `positionOrder` distributions before and after deduplication on the same modeling population (Indianapolis 500 rounds excluded in both). This isolates deduplication: 131 rows belonged to duplicate-key groups, and 67 extra rows were removed to enforce one row per driver-race.
   - *(Right Panel)* Post-cleaning annual podium rate verifies longitudinal target stability tightly bounded around ~15% across championship eras.
 
 ---

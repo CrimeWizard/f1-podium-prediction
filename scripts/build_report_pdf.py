@@ -228,7 +228,7 @@ cleaning_text = (
     '<b>Key Integrity Audit:</b> Primary key audits across all 14 tables revealed zero duplicate and zero null keys. '
     'Foreign key reconciliations across 23 relational links showed zero orphan child records and zero broken references.<br/>'
     '<b>Shared-Drive Resolution:</b> Early Formula 1 regulations (principally 1950s) permitted drivers to swap cars mid-race, producing multiple records per driver-race. '
-    'In the complete historical dataset, 176 duplicate rows were identified (131 when excluding the non-championship Indianapolis 500 rounds). '
+    'Across the full dataset, 176 rows belonged to duplicate-key groups and deduplication removed 91 extra rows. In the modeling population (excluding Indianapolis 500 rounds), 131 rows belonged to duplicate-key groups and deduplication removed 67 extra rows. '
     'Our policy retains the single record with the best (lowest) <code>positionOrder</code>, capturing the driver’s best verified finishing stint. '
     'The cleaned primary modeling table contains 26,287 unique driver-race records.'
 )
@@ -242,15 +242,14 @@ eda_text = (
     'Figure 1 displays the raw distribution of finishing positions across all historical entries; '
     'Figure 2 illustrates the historical drift in qualifying row coverage per race, demonstrating that official session lap times '
     'were unrecorded prior to the mid-1990s and motivating our missingness indicators and imputation strategy.<br/>'
-    '<b>Direct Impact of Data Cleaning (Figure 3):</b> Figure 3 directly evaluates the effect of cleaning on the data: '
-    '(Left) A direct before-and-after comparison of <code>positionOrder</code> distributions contrasts raw entries against the cleaned modeling base, '
-    'demonstrating the elimination of 176 shared-drive duplicate records (131 excluding non-championship Indy 500 rounds) to enforce a strict 1-to-1 driver-race grain. '
+    '<b>Direct Impact of Data Cleaning (Figure 3):</b> Figure 3 compares raw and deduplicated <code>positionOrder</code> distributions on the same modeling population, excluding Indianapolis 500 rounds in both. '
+    'In this scope, 131 rows belonged to duplicate-key groups and deduplication removed 67 extra rows to enforce one row per driver-race. '
     '(Right) The annual podium rate post-cleaning confirms longitudinal target stability tightly bounded around ~15% across championship eras.'
 )
 story.append(P(eda_text, 'BodyRegular'))
 story.append(make_chart('eda_position_order_raw.png', 'Figure 1: Distribution of raw finishing positions across uncleaned historical records.', max_height=1.9*inch))
 story.append(make_chart('eda_qualifying_coverage_by_year.png', 'Figure 2: Historical qualifying data coverage drift: mean qualifying rows per Grand Prix by season.', max_height=1.9*inch))
-story.append(make_chart('eda_podium_rate_by_year.png', 'Figure 3: EDA before & after cleaning: (Left) Direct comparison of positionOrder before vs after deduplication; (Right) Cleaned annual podium rate stability.', max_height=2.0*inch))
+story.append(make_chart('eda_podium_rate_by_year.png', 'Figure 3: EDA before & after cleaning: (Left) positionOrder before vs after deduplication on the same non-Indy population; (Right) cleaned annual podium rate.', max_height=2.0*inch))
 
 # ==================== PAGE 3: Data-Engineering Q1 & Q2 ====================
 story.append(PageBreak())

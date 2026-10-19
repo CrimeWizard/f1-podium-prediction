@@ -84,7 +84,7 @@ from pathlib import Path
 
 ROOT = Path.cwd()
 from src.audit import audit_foreign_keys, audit_primary_keys
-from src.cleaning import build_base_results_table
+from src.cleaning import build_base_results_table, exclude_indianapolis_500
 from src.config import DATA_PROCESSED, FIGURES_DIR
 from src.de_analysis import (
     question1_front_row_podium_by_circuit,
