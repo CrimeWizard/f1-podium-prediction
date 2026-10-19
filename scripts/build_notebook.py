@@ -194,7 +194,7 @@ plt.show()
 md(
     """## 4. Data-engineering questions
 
-**Q1** uses **grid positions 1–2** (front row after penalties), not qualifying position alone. Era split at **2014** (hybrid rules).
+**Q1** reports qualifying positions 1–2 and actual grid positions 1–2 separately: penalties can make them differ. Each denominator includes only rows with the relevant position observed; rankings are split before/from 2014.
 
 **Q2** compares home vs away podiums within **grid bins** so we do not confound home advantage with better qualifying.
 
@@ -206,13 +206,25 @@ code(
 status_map.to_csv(DATA_PROCESSED / "status_category_mapping.csv", index=False)
 display(status_map.groupby("category").size().rename("count"))
 
-q1 = question1_front_row_podium_by_circuit(base, tables["circuits"])
-q1_top = q1.sort_values("podium_rate", ascending=False).groupby("era").head(10)
-display(q1_top)
+q1 = question1_front_row_podium_by_circuit(base, tables["circuits"], tables["qualifying"])
+q1.to_csv(DATA_PROCESSED / "de_q1_front_row_by_circuit.csv", index=False)
+q1["rank_within_era"] = q1.groupby(["start_basis", "era"])["podium_rate"].rank(method="min", ascending=False)
+q1_rank = q1.pivot_table(index=["start_basis", "circuitId", "name"], columns="era", values="rank_within_era")
+if "pre_2014" in q1_rank and "from_2014" in q1_rank:
+    q1_rank["rank_change_pre_minus_post"] = q1_rank["pre_2014"] - q1_rank["from_2014"]
+q1_rank.to_csv(DATA_PROCESSED / "de_q1_circuit_rank_changes.csv")
+q1_top = q1.sort_values("podium_rate", ascending=False).groupby(["start_basis", "era"], observed=True).head(10)
+display(q1_top.sort_values(["start_basis", "era", "podium_rate"], ascending=[True, True, False]))
 
-plt.figure(figsize=(10, 5))
-for era, g in q1.groupby("era"):
-    g.nlargest(15, "podium_rate").plot(x="name", y="podium_rate", kind="bar", title=f"Q1 top circuits {era}")
+fig, axes = plt.subplots(2, 2, figsize=(16, 12))
+for ax, ((basis, era), g) in zip(axes.flat, q1.groupby(["start_basis", "era"], observed=True)):
+    top = g.nlargest(10, "podium_rate").sort_values("podium_rate")
+    ax.barh(top["name"], top["podium_rate"])
+    ax.set_title(f"{basis.replace('_', ' ').title()} — {era}")
+    ax.set_xlabel("Podium rate")
+    ax.set_xlim(0, 1)
+fig.suptitle("Q1 Front-row conversion by circuit: qualifying vs actual grid")
+fig.tight_layout()
 plt.savefig(FIGURES_DIR / "de_q1_front_row_podium.png", bbox_inches="tight")
 plt.show()
 
@@ -225,7 +237,21 @@ plt.savefig(FIGURES_DIR / "de_q2_home_advantage.png", bbox_inches="tight")
 plt.show()
 
 q3 = question3_mechanical_retirement_by_constructor(base, tables["status"], tables["constructors"])
-display(q3.sort_values("mech_rate", ascending=False).groupby("era").head(10))
+q3.to_csv(DATA_PROCESSED / "de_q3_mechanical_retirement_by_constructor.csv", index=False)
+q3_top = q3.sort_values("mech_rate", ascending=False).groupby("era", observed=True).head(10)
+display(q3_top.sort_values(["era", "mech_rate"], ascending=[True, False]))
+
+fig, axes = plt.subplots(1, 2, figsize=(16, 7))
+for ax, (era, g) in zip(axes, q3.groupby("era", observed=True)):
+    top = g.nlargest(10, "mech_rate").sort_values("mech_rate")
+    ax.barh(top["name"], top["mech_rate"])
+    ax.set_title(f"{era}")
+    ax.set_xlabel("Mechanical retirements / starts")
+    ax.set_xlim(0, max(0.05, float(q3_top["mech_rate"].max()) * 1.1))
+fig.suptitle("Q3 Constructors with highest mechanical-retirement rates")
+fig.tight_layout()
+plt.savefig(FIGURES_DIR / "de_q3_mechanical_retirement.png", bbox_inches="tight")
+plt.show()
 """
 )
 
@@ -271,7 +297,7 @@ md(
 2. **Imputation statistic:** median vs mean.
 3. **Indy 500 policy:** exclude vs include championship rounds.
 
-We report validation **PR-AUC** for each variant (primary metric).
+We report validation **PR-AUC** for each variant (primary metric); result tables are saved under `data/processed/`.
 """
 )
 code(
@@ -281,6 +307,11 @@ prep_indy = indy_500_exclusion_experiment(tables)
 display(prep_order)
 display(prep_impute)
 display(prep_indy)
+pd.concat([
+    prep_order.rename(columns={"preprocessing_order": "experiment"}).assign(experiment=lambda d: "order: " + d["experiment"]),
+    prep_impute.rename(columns={"imputation_strategy": "experiment"}).assign(experiment=lambda d: "imputation: " + d["experiment"]),
+    prep_indy.rename(columns={"indy_policy": "experiment"}).assign(experiment=lambda d: "Indianapolis: " + d["experiment"]),
+], ignore_index=True)[["experiment", "pr_auc_val"]].to_csv(DATA_PROCESSED / "preprocessing_experiments.csv", index=False)
 """
 )
 
@@ -338,11 +369,21 @@ display(rf_cmp.groupby("model")["train_minus_val_pr_auc"].first().rename("train_
 """
 )
 
-md("## 9. Feature-group ablation")
+md("""## 9. Feature-group ablation
+
+Each feature group is removed in turn and the same logistic-regression pipeline is retrained. Compare validation and held-out test PR-AUC with the full-feature baseline; test values are reported only after the final evaluation.
+""")
 code(
     """abl = ablation_table(train_df, val_df, test_df)
 abl.to_csv(DATA_PROCESSED / "feature_ablation.csv", index=False)
 display(abl)
+abl[abl["feature_group_removed"] != "none"].sort_values("pr_auc_test").plot(
+    x="feature_group_removed", y="pr_auc_test", kind="bar", legend=False,
+    title="Test PR-AUC after removing each feature group", ylabel="PR-AUC"
+)
+plt.tight_layout()
+plt.savefig(FIGURES_DIR / "feature_ablation_test_pr_auc.png", bbox_inches="tight")
+plt.show()
 """
 )
 
@@ -357,7 +398,15 @@ md(
 )
 code(
     """imp = permutation_importance_table(lr, splits["val"][0], splits["val"][1])
+imp.to_csv(DATA_PROCESSED / "permutation_importance.csv", index=False)
 display(imp.head(15))
+imp.head(15).sort_values("importance_mean").plot.barh(
+    x="feature", y="importance_mean", xerr="importance_std", legend=False,
+    title="Permutation importance on validation data (PR-AUC scoring)"
+)
+plt.tight_layout()
+plt.savefig(FIGURES_DIR / "xai_permutation_importance.png", bbox_inches="tight")
+plt.show()
 
 try:
     from src.xai import shap_summary

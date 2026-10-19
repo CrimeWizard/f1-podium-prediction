@@ -14,6 +14,7 @@ def permutation_importance_table(model_pipeline, X, y, *, n_repeats: int = 5, ra
         n_repeats=n_repeats,
         random_state=random_state,
         n_jobs=-1,
+        scoring="average_precision",
     )
     return pd.DataFrame({
         "feature": X.columns,

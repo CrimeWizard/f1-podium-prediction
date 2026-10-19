@@ -46,23 +46,37 @@ def _status_is_mechanical(status_series: pd.Series) -> pd.Series:
 def question1_front_row_podium_by_circuit(
     base: pd.DataFrame,
     circuits: pd.DataFrame,
-    *,
-    use_grid: bool = True,
+    qualifying: pd.DataFrame | None = None,
 ) -> pd.DataFrame:
     """
-    Q1: front-row (grid 1–2) → podium rate by circuit; split pre/post hybrid era.
-    use_grid=True uses actual grid; False uses qualifying position proxy if available.
+    Q1: compare qualifying-front-row and actual-grid-front-row podium rates.
+
+    The two bases are reported separately because grid penalties can move a
+    driver away from their qualifying position. Missing qualifying records are
+    excluded from the qualifying-front-row denominator, but remain eligible in
+    the grid-front-row analysis.
     """
-    df = base.copy()
-    pos_col = "grid" if use_grid else "grid"
-    front = df[df[pos_col].isin([1, 2])].copy()
+    if qualifying is None or "position" not in qualifying.columns:
+        raise ValueError("Q1 requires the qualifying table with a 'position' column")
+
+    grid_front = base.loc[base["grid"].isin([1, 2])].copy()
+    grid_front["start_basis"] = "actual_grid_front_row"
+    quali = qualifying[["raceId", "driverId", "position"]].copy()
+    quali["position"] = pd.to_numeric(quali["position"], errors="coerce")
+    quali = quali.dropna(subset=["position"]).sort_values("position").drop_duplicates(
+        ["raceId", "driverId"], keep="first"
+    )
+    quali_front = base.merge(quali, on=["raceId", "driverId"], how="inner")
+    quali_front = quali_front.loc[quali_front["position"].isin([1, 2])].copy()
+    quali_front["start_basis"] = "qualifying_front_row"
+    front = pd.concat([grid_front, quali_front], ignore_index=True)
     front["era"] = pd.cut(
         front["year"],
         bins=[-float("inf"), HYBRID_ERA_START - 1, float("inf")],
         labels=[f"pre_{HYBRID_ERA_START}", f"from_{HYBRID_ERA_START}"],
     )
     agg = (
-        front.groupby(["circuitId", "era"], observed=True)
+        front.groupby(["start_basis", "circuitId", "era"], observed=True)
         .agg(front_row_starts=("podium", "count"), podiums=("podium", "sum"))
         .reset_index()
     )
