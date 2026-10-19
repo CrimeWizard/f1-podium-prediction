@@ -109,14 +109,6 @@ styles.add(ParagraphStyle(
     spaceAfter=5,
 ))
 styles.add(ParagraphStyle(
-    name='BodyCallout',
-    fontName='Helvetica-Oblique',
-    fontSize=8.4,
-    leading=11.5,
-    textColor=colors.HexColor('#1C4E80'),
-    spaceAfter=5,
-))
-styles.add(ParagraphStyle(
     name='Caption',
     fontName='Helvetica',
     fontSize=7.4,
@@ -188,7 +180,7 @@ def make_chart(name, caption, width=6.6*inch, max_height=2.3*inch):
 # 3. Assemble document content
 story = []
 
-# --- PAGE 1: Header, Executive Summary, Cutoff, Cleaning & Audit ---
+# ==================== PAGE 1: Overview, Cutoff, Cleaning & Audit ====================
 story.append(P('Milestone 1 Submission Report', 'DocTitle'))
 story.append(P('Formula 1 Podium Prediction | Introduction to Artificial Intelligence', 'DocSubTitle'))
 story.append(HRFlowable(width='100%', thickness=1, color=colors.HexColor('#0D6680'), spaceAfter=6, spaceBefore=0))
@@ -212,7 +204,8 @@ exec_text = (
     'A strictly chronological train/validation/test split is enforced (train &le; 2019, validation 2020–2021, held-out test 2022–2024). '
     'Given severe class imbalance (~13–15% podiums), PR-AUC is our primary evaluation metric. '
     'Among four model variants, regularized Random Forest attained the highest unseen test PR-AUC (0.6965), while a shallow Neural Network achieved '
-    'the highest validation PR-AUC (0.7433). Both decisively outperformed a defaulted, overfitted tree baseline and linear logistic regression.'
+    'the highest validation PR-AUC (0.7433). Both decisively outperformed a defaulted, overfitted tree baseline and linear logistic regression. '
+    'All analytical conclusions are framed as descriptive historical associations rather than causal effects.'
 )
 story.append(P(exec_text, 'BodyRegular'))
 
@@ -239,21 +232,26 @@ cleaning_text = (
 )
 story.append(P(cleaning_text, 'BodyRegular'))
 
-# --- PAGE 2: Exploratory Data Analysis (Before & After Cleaning) ---
+# ==================== PAGE 2: EDA Before & After Cleaning ====================
 story.append(PageBreak())
 story.append(P('Exploratory Data Analysis (Before & After Cleaning)', 'SecH1'))
 eda_text = (
-    'EDA was conducted both prior to and following data cleaning to quantify historical coverage drift and verify target stability. '
-    'Figure 1 illustrates the raw finishing position distribution across all entries; Figure 2 demonstrates that recorded qualifying session rows '
-    'per race were virtually non-existent prior to the 1990s, requiring robust imputation and missingness indicators during modeling. '
-    'Figure 3 confirms that after cleaning duplicate rows and enforcing one row per driver-race, the annual podium rate remains tightly bounded around ~15%.'
+    'EDA was conducted across both raw and cleaned pipeline stages. '
+    '<b>Diagnostic Scope & Note on Metrics:</b> In the exploratory notebook, the pre-cleaning phase inspects raw input integrity '
+    '(Figure 1 shows the raw distribution of finishing positions across all entries; Figure 2 charts the severe historical drift in qualifying row coverage per race, '
+    'demonstrating that official lap times were absent prior to the mid-1990s). '
+    'The post-cleaning phase (Figure 3) tracks target stability over time, verifying that resolving shared-drive duplicates and enforcing a unique '
+    '<code>(raceId, driverId)</code> grain stabilizes the annual podium rate around ~15% across modern eras. '
+    'While Figures 1 and 3 visualize different dimensions (raw finish position spread vs. cleaned longitudinal target rate), '
+    'the concrete impact of cleaning is measurable: eliminating 176 duplicate shared-drive records, resolving sentinels, '
+    'and ensuring exactly one valid binary label per entry.'
 )
 story.append(P(eda_text, 'BodyRegular'))
-story.append(make_chart('eda_position_order_raw.png', 'Figure 1: Distribution of raw finishing positions across historical Formula 1 records.', max_height=2.1*inch))
-story.append(make_chart('eda_qualifying_coverage_by_year.png', 'Figure 2: Historical qualifying data coverage drift: mean qualifying rows per Grand Prix by season.', max_height=2.1*inch))
-story.append(make_chart('eda_podium_rate_by_year.png', 'Figure 3: Annual podium rate post-cleaning: stable ~15% positive prevalence across modern championship eras.', max_height=2.1*inch))
+story.append(make_chart('eda_position_order_raw.png', 'Figure 1: Distribution of raw finishing positions across uncleaned historical records.', max_height=2.0*inch))
+story.append(make_chart('eda_qualifying_coverage_by_year.png', 'Figure 2: Historical qualifying data coverage drift: mean qualifying rows per Grand Prix by season.', max_height=2.0*inch))
+story.append(make_chart('eda_podium_rate_by_year.png', 'Figure 3: Annual podium rate post-cleaning: stable ~15% positive prevalence across modern championship eras.', max_height=2.0*inch))
 
-# --- PAGE 3: Data-Engineering Questions (Q1 & Q2) ---
+# ==================== PAGE 3: Data-Engineering Q1 & Q2 ====================
 story.append(PageBreak())
 story.append(P('3. Data-Engineering Questions (Multi-Hop Joins)', 'SecH1'))
 
@@ -263,24 +261,27 @@ q1_text = (
     'The multi-hop join combines <code>results</code>, <code>races</code>, <code>circuits</code>, and <code>qualifying</code>. '
     'Denominators exclude 1,601 non-starters and account for 14,231 legacy starters lacking electronic qualifying records. '
     'Circuits require &ge; 20 starts per era/basis combination. '
-    '<b>Leading conversions:</b> Magny-Cours converts actual grid front rows highest pre-2014 (80.6%; 29/36); Yas Marina converts actual grid highest from 2014 (86.4%; 19/22). '
-    'Suzuka converts qualifying front rows highest pre-2014 (76.9%; 20/26); Monaco converts qualifying highest from 2014 (85.0%; 17/20). '
-    'Paired Spearman rank correlation across 7 common circuits is weakly negative: &minus;0.180 for actual grid and &minus;0.291 for qualifying, '
-    'confirming that hybrid-era turbo-hybrid power units and DRS altered track-specific conversion dynamics.'
+    '<b>Observed conversion rates:</b> Magny-Cours converted actual grid front rows highest pre-2014 (80.6%; 29/36); Yas Marina converted actual grid highest from 2014 (86.4%; 19/22). '
+    'Suzuka converted qualifying front rows highest pre-2014 (76.9%; 20/26); Monaco converted qualifying highest from 2014 (85.0%; 17/20). '
+    'Paired Spearman rank correlation across 7 common circuits is weakly negative: &minus;0.180 for actual grid and &minus;0.291 for qualifying. '
+    '<i>Descriptive Note:</i> While conversion hierarchies shifted between eras, this correlation documents an empirical difference across time periods '
+    'rather than proving a specific causal mechanism.'
 )
 story.append(P(q1_text, 'BodyRegular'))
-story.append(make_chart('de_q1_front_row_podium.png', 'Figure 4: Front-row podium conversion rates by circuit, comparing pre-2014 vs from-2014 across actual grid and qualifying.', max_height=2.2*inch))
+story.append(make_chart('de_q1_front_row_podium.png', 'Figure 4: Front-row podium conversion rates by circuit, comparing pre-2014 vs from-2014 across actual grid and qualifying.', max_height=2.1*inch))
 
 story.append(P('Q2. Home-Race Performance Controlling for Starting Grid Position', 'SecH2'))
 q2_text = (
     'Home races are determined by matching normalized driver nationality to circuit host country (e.g., British &rarr; UK). '
-    'To decouple genuine home advantage from qualifying superiority, drivers are stratified into starting grid bins (1–5, 6–10, 11–15, 16+). '
+    'To assess whether home drivers podium more often when starting from similar grid slots, entries are stratified into starting grid bins (1–5, 6–10, 11–15, 16+). '
     'Exclusions: 0 unknown-country records, 130 zero/missing grid starts. '
     '<b>Findings:</b> In Grid 1–5, home drivers achieved a 48.7% podium rate (181/372) vs 45.2% away (2,340/5,180; +3.5%). '
     'In Grid 6–10, home was 8.7% (36/416) vs 11.4% away (582/5,126; &minus;2.7%). '
     'In Grid 11–15, home was 2.7% (11/414) vs 3.0% away (154/5,117). '
     'In Grid 16+, home was 0.3% (2/729) vs 0.7% away (53/7,202). '
-    'Because the effect is inconsistent across bins and negligible in the midfield and rear, apparent home advantage is primarily driven by qualifying position rather than race-day psychological effects.'
+    '<i>Descriptive Conclusion:</i> Controlling for grid reveals no consistent or systematic home advantage. '
+    'Observed rates differ negligibly across bins and swing in opposite directions (+3.5% in top-5 vs &minus;2.7% in midfield), '
+    'showing that home status provides no reliable independent predictive boost once starting grid is accounted for.'
 )
 story.append(P(q2_text, 'BodyRegular'))
 
@@ -296,27 +297,30 @@ q2_data = pd.DataFrame([
     ['16+', 'Home', 729, 2, 0.0027],
 ], columns=['Grid Bin', 'Status', 'Starts', 'Podiums', 'Podium Rate'])
 story.append(build_table(q2_data, widths=[1.1*inch, 1.1*inch, 1.2*inch, 1.2*inch, 1.4*inch]))
-story.append(Spacer(1, 4))
-story.append(make_chart('de_q2_home_advantage.png', 'Figure 5: Home versus away podium conversion stratified by starting grid position bin.', max_height=1.9*inch))
 
-# --- PAGE 4: Q3, Features & Pre-Race Cutoff ---
+# ==================== PAGE 4: Figure 5 & Q3 Mechanical Retirements ====================
 story.append(PageBreak())
+story.append(make_chart('de_q2_home_advantage.png', 'Figure 5: Home versus away podium conversion stratified by starting grid position bin.', max_height=2.3*inch))
+
 story.append(P('Q3. Mechanical-Retirement Rates by Constructor (2014–2021 vs 2022–2024)', 'SecH2'))
 q3_text = (
-    'We categorize official status descriptions using semantic keyword matching, separating purely mechanical failures '
-    '(power unit, turbo, electrical, hydraulic, gearbox, suspension) from crashes, driver errors, and regulatory disqualifications. '
+    'We categorize official status descriptions using keyword matching, isolating mechanical failures '
+    '(power unit, turbo, electrical, hydraulic, gearbox, suspension) from collisions, driver errors, and regulatory disqualifications. '
     'Denominators include all race starters (1,601 non-starters excluded). '
-    '<b>Findings:</b> In 2014–2021 (turbo-hybrid era), Caterham exhibited the highest observed failure rate at 32.4% (11/34 starts). '
-    'In 2022–2024 (ground-effect era), RB F1 Team had the highest observed rate at 10.4% (5/48 starts). '
-    'Across all constructors, mechanical retirement frequencies dropped substantially in 2022–2024, reflecting mature engine freeze regulations.'
+    '<b>Descriptive Findings:</b> In 2014–2021, Caterham had the highest observed failure rate at 32.4% (11/34 starts). '
+    'In 2022–2024, RB F1 Team had the highest observed rate at 10.4% (5/48 starts). '
+    'Across constructors, observed mechanical retirement proportions were lower overall in 2022–2024 than in 2014–2021; '
+    'we report this as a descriptive comparison across defined eras rather than attributing the trend to any single regulatory cause.'
 )
 story.append(P(q3_text, 'BodyRegular'))
-story.append(make_chart('de_q3_mechanical_retirement.png', 'Figure 6: Mechanical retirement rates by constructor, comparing 2014–2021 vs 2022–2024 eras.', max_height=2.2*inch))
+story.append(make_chart('de_q3_mechanical_retirement.png', 'Figure 6: Mechanical retirement rates by constructor, comparing 2014–2021 vs 2022–2024 eras.', max_height=2.5*inch))
 
+# ==================== PAGE 5: Features & Preprocessing Experiments ====================
+story.append(PageBreak())
 story.append(P('4. Leakage-Safe Feature Selection and Target Evidence', 'SecH1'))
 feat_text = (
     'All features are strictly verified against the pre-race prediction cutoff. '
-    'Championship standings are shifted to reflect the driver and constructor standings <i>entering</i> the race weekend, '
+    'Championship standings are shifted to reflect driver and constructor standings <i>entering</i> the race weekend, '
     'resetting to zero at each season opener. Prior podium rate is computed over past career starts only.'
 )
 story.append(P(feat_text, 'BodyRegular'))
@@ -330,10 +334,8 @@ feat_desc = pd.DataFrame([
 ], columns=['Feature Group', 'Pre-Race Validity and Description'])
 story.append(build_table(feat_desc, widths=[2.2*inch, 4.4*inch]))
 story.append(Spacer(1, 4))
-story.append(make_chart('feature_target_relationships.png', 'Figure 7: Empirical relationships between pre-race features (grid slot and prior form) and podium probability.', max_height=1.9*inch))
+story.append(make_chart('feature_target_relationships.png', 'Figure 7: Empirical associations between pre-race features (grid slot and prior form) and podium probability.', max_height=2.1*inch))
 
-# --- PAGE 5: Splitting, Preprocessing Experiments, & Predictive Modeling ---
-story.append(PageBreak())
 story.append(P('5. Temporal Dataset Splitting and Preprocessing Experiments', 'SecH1'))
 split_text = (
     'To mirror actual deployment and prevent look-ahead bias, data is split chronologically: '
@@ -357,10 +359,12 @@ indy_comp = pd.DataFrame([
 ], columns=['Indianapolis 500 Policy', 'Rows', 'Val PR-AUC', 'Test PR-AUC'])
 
 story.append(build_table(prep_comp, widths=[3.3*inch, 3.3*inch]))
-story.append(Spacer(1, 4))
-story.append(P('<b>Sensitivity Analysis:</b> Excluding Indianapolis 500 rounds (which ran under different technical regulations from 1950–1960) produces identical validation PR-AUC and negligible change on test (<0.001 PR-AUC), proving pipeline stability.', 'BodyRegular'))
+story.append(Spacer(1, 3))
+story.append(P('<b>Sensitivity Analysis:</b> Excluding Indianapolis 500 rounds (1950–1960 non-championship technical regulations) produces identical validation PR-AUC and negligible change on test (<0.001 PR-AUC), confirming pipeline stability.', 'BodyRegular'))
 story.append(build_table(indy_comp, widths=[2.6*inch, 1.2*inch, 1.4*inch, 1.4*inch]))
 
+# ==================== PAGE 6: Predictive Modeling & Results Table ====================
+story.append(PageBreak())
 story.append(P('6. Predictive Modeling and Evaluation', 'SecH1'))
 model_desc_text = (
     'We evaluate four model configurations representing diverse mathematical approaches: '
@@ -391,15 +395,18 @@ metric_rows = [
 df_metrics = pd.DataFrame(metric_rows, columns=['Model', 'Split', 'PR-AUC', 'ROC-AUC', 'F1', 'Accuracy', 'Precision', 'Recall'])
 story.append(build_table(df_metrics, widths=[1.6*inch, 0.7*inch, 0.7*inch, 0.7*inch, 0.65*inch, 0.7*inch, 0.7*inch, 0.65*inch]))
 story.append(Spacer(1, 4))
-story.append(make_chart('model_pr_auc_comparison.png', 'Figure 8: Comparative PR-AUC across models and chronological data splits.', max_height=1.85*inch))
+story.append(make_chart('model_pr_auc_comparison.png', 'Figure 8: Comparative PR-AUC across models and chronological data splits.', max_height=2.2*inch))
 
-# --- PAGE 6: Feature Ablation & Explainability (XAI) ---
+# ==================== PAGE 7: Feature Ablation & Permutation Importance ====================
 story.append(PageBreak())
 story.append(P('7. Feature-Group Ablation Experiment', 'SecH1'))
 abl_text = (
     'We systematically ablate one feature group at a time from the baseline model to quantify each component’s marginal contribution. '
+    'The full-feature baseline achieves <b>0.6610 Test PR-AUC</b> (table below). '
     'Removing <b>grid</b> triggers the steepest drop on unseen test data (&Delta; &minus;0.0249 PR-AUC), confirming starting slot as the paramount predictor. '
-    'Qualifying times (&Delta; &minus;0.0101) and historical form (&Delta; &minus;0.0056) provide necessary secondary refinements.'
+    'Qualifying times (&Delta; &minus;0.0101) and historical form (&Delta; &minus;0.0056) provide secondary refinements. '
+    '<i>Note on Figure 9:</i> As implemented in the notebook script, Figure 9 specifically visualizes the test performance levels across the four ablated feature groups '
+    'to highlight their relative ranking; the reference full-feature baseline level is 0.6610.'
 )
 story.append(P(abl_text, 'BodyRegular'))
 
@@ -412,35 +419,39 @@ abl_data = pd.DataFrame([
 ], columns=['Feature Group Removed', 'Val PR-AUC', 'Held-Out Test PR-AUC'])
 story.append(build_table(abl_data, widths=[3.0*inch, 1.8*inch, 1.8*inch]))
 story.append(Spacer(1, 4))
-story.append(make_chart('feature_ablation_test_pr_auc.png', 'Figure 9: Impact of feature group ablation on held-out test PR-AUC.', max_height=1.8*inch))
+story.append(make_chart('feature_ablation_test_pr_auc.png', 'Figure 9: Impact of feature group ablation on held-out test PR-AUC (baseline is 0.6610 in table above).', max_height=1.85*inch))
 
 story.append(P('8. Model Explainability (XAI) and Detailed Interpretation', 'SecH1'))
 xai_intro = (
     'To inspect model decision rules globally and locally, we compute permutation feature importance, SHAP values, and LIME explanations. '
-    '<b>Important Causal Disclaimer:</b> These explanations represent statistical predictive associations within the model, <i>not causal effects</i>. '
-    'A high feature importance confirms model reliance, not that changing a feature will directly alter race outcomes.<br/>'
+    '<b>Important Causal Disclaimer:</b> These explanations represent statistical associations learned by the model, <i>not causal effects</i>. '
+    'A feature receiving high weight confirms model reliance, not that an external intervention on that feature would alter race outcomes.<br/>'
     '<b>Global Permutation Importance (Figure 10):</b> Permuting starting grid degrades validation PR-AUC by ~0.15, confirming it as the primary anchor. '
-    'Driver rolling podium form is second (~0.11), followed by constructor standings rank (~0.05).<br/>'
-    '<b>Global SHAP Beeswarm (Figure 11):</b> Lower numerical grid values (front-of-grid starts) produce large positive SHAP contributions to podium log-odds, '
-    'whereas starts outside the top 10 yield heavy negative penalties. High prior podium rate similarly shifts probabilities upward.<br/>'
-    '<b>Local LIME Explanation (Figure 12):</b> For an exemplary validation prediction (Lewis Hamilton, predicted podium probability 85.5%), '
-    'the local explanation demonstrates that starting near the front (<code>num__grid &le; &minus;0.85</code>) added +0.36 to podium probability, '
-    'and high historical podium rate (<code>num__podium_rate_prev > 0.33</code>) added +0.16, comfortably surpassing the 0.7584 classification threshold.'
+    'Driver rolling podium form is second (~0.11), followed by constructor standings rank (~0.05).'
 )
 story.append(P(xai_intro, 'BodyRegular'))
-story.append(make_chart('xai_permutation_importance.png', 'Figure 10: Permutation feature importance scored by PR-AUC drop on validation data.', max_height=1.8*inch))
+story.append(make_chart('xai_permutation_importance.png', 'Figure 10: Permutation feature importance scored by PR-AUC drop on validation data.', max_height=2.0*inch))
 
-# --- PAGE 7: SHAP, LIME, Inference Demo, Limitations & References ---
+# ==================== PAGE 8: SHAP, LIME, Inference Demo, Limitations ====================
 story.append(PageBreak())
 story.append(P('Model Explainability Figures (Continued)', 'SecH1'))
-story.append(make_chart('xai_shap_beeswarm.png', 'Figure 11: SHAP summary beeswarm plot illustrating feature value distributions and impact on model output.', max_height=2.3*inch))
-story.append(make_chart('xai_lime_row0.png', 'Figure 12: Local LIME explanation for an individual high-confidence validation prediction (predicted probability: 85.5%).', max_height=2.3*inch))
+xai_cont_text = (
+    '<b>Global SHAP Beeswarm (Figure 11):</b> Lower numerical grid values (front-of-grid starts) produce large positive SHAP contributions to podium log-odds, '
+    'whereas starts outside the top 10 yield heavy negative penalties. High prior podium rate similarly shifts log-odds upward.<br/>'
+    '<b>Local LIME Explanation (Figure 12):</b> For an exemplary validation prediction (Lewis Hamilton, predicted podium probability 85.5%), '
+    'LIME fits a local linear surrogate model whose feature weights indicate local importance. Favorable starting grid (<code>num__grid &le; &minus;0.85</code>) '
+    'has a surrogate weight of +0.36 toward the podium class, and high historical form (<code>num__podium_rate_prev > 0.33</code>) has a surrogate weight of +0.16. '
+    'These positive weights explain why the local surrogate favors the podium prediction, matching the primary model’s 85.5% probability.'
+)
+story.append(P(xai_cont_text, 'BodyRegular'))
+story.append(make_chart('xai_shap_beeswarm.png', 'Figure 11: SHAP summary beeswarm plot illustrating feature value distributions and impact on model output.', max_height=1.85*inch))
+story.append(make_chart('xai_lime_row0.png', 'Figure 12: Local LIME explanation for an individual validation prediction (local surrogate weights for predicted prob: 85.5%).', max_height=1.85*inch))
 
 story.append(P('9. Inference Function Demonstration', 'SecH1'))
 inf_text = (
     'The production inference function (<code>src/inference.py</code>) processes single driver-race dictionary inputs, '
     'applying imputation and scaling pipelines consistently without data leakage. '
-    'Tested on a complete validation record (Hamilton, grid 2), it predicted a <b>85.46%</b> podium probability (Class 1 at threshold 0.7584). '
+    'Tested on a complete validation record (Hamilton, grid 2), it predicted an <b>85.46%</b> podium probability (Class 1 at threshold 0.7584). '
     'Tested on a partially missing record (midfield entry lacking session qualifying lap times), the pipeline handled missing values via median imputation '
     'and returned a <b>40.55%</b> podium probability (Class 0), demonstrating production stability.'
 )
