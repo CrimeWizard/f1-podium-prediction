@@ -29,11 +29,19 @@
 
 ## 2. EDA and cleaning
 
+**Figure provenance.** Every figure in this report is copied from the public Kaggle notebook output (`crimewizard/acl-ms1`, run version 1, kernel version `359399439`).
+
 **EDA before cleaning.** We inspected raw `positionOrder` in `results` to confirm finish positions are usable for the target. We plotted mean qualifying rows per race by year; the `qualifying` table is empty for early decades and becomes dense from the mid-1990s onward, so quali features are often missing for old seasons.
+
+![Raw finishing-position distribution](../outputs/figures/eda_position_order_raw.png)
+
+![Qualifying coverage by year](../outputs/figures/eda_qualifying_coverage_by_year.png)
 
 **Cleaning.** Missing sentinels (`\N`) are parsed as NA. We enforce **one row per (`raceId`, `driverId`)**, keeping the best `positionOrder` when shared-drive duplicates exist. **Indianapolis 500** championship rounds (1950–1960) are excluded from the main modeling base as non-comparable ovals. Primary and foreign key audits are reported in notebook section 2.
 
 **EDA after cleaning.** We confirm podium rate by year on the cleaned table (notebook section 3).
+
+![Podium rate by season](../outputs/figures/eda_podium_rate_by_year.png)
 
 ---
 
@@ -43,7 +51,11 @@
 
 **Q2 — Home race advantage.** We compare podium rate for **home** vs **away** drivers within **grid bins**, so better qualifying is not confounded with home effect. See `de_q2_home_advantage.png`.
 
+![Home race advantage by grid bin](../outputs/figures/de_q2_home_advantage.png)
+
 **Q3 — Mechanical retirement by constructor.** Ergast status strings are mapped to categories (`src/status_mapping.py`). Mechanical DNFs are counted per constructor for grid > 0 starts, comparing 2014–2021 vs 2022+. Status category counts and tables are in notebook section 4.
+
+![Front-row podium rates by circuit and era](../outputs/figures/de_q1_front_row_podium.png)
 
 ---
 
@@ -94,6 +106,10 @@ Dropping feature groups (logistic baseline) on validation/test PR-AUC is in note
 ## 8. Explainability (XAI)
 
 We report permutation importance, SHAP (global), and LIME (one validation row). **Disclaimer:** these show what the model relied on for predictions, not causal effects on real-world podiums.
+
+![SHAP global feature importance](../outputs/figures/xai_shap_beeswarm.png)
+
+![LIME explanation for one validation example](../outputs/figures/xai_lime_row0.png)
 
 ---
 

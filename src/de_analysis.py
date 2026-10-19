@@ -76,6 +76,42 @@ def _normalize_country(name: str) -> str:
         "great britain": "united kingdom",
         "usa": "united states",
         "uae": "united arab emirates",
+        # Ergast driver nationalities are demonyms while circuit countries are
+        # country names. Normalize common demonyms before comparing them.
+        "british": "united kingdom",
+        "english": "united kingdom",
+        "scottish": "united kingdom",
+        "welsh": "united kingdom",
+        "american": "united states",
+        "dutch": "netherlands",
+        "french": "france",
+        "german": "germany",
+        "italian": "italy",
+        "spanish": "spain",
+        "belgian": "belgium",
+        "austrian": "austria",
+        "swiss": "switzerland",
+        "brazilian": "brazil",
+        "argentine": "argentina",
+        "argentinian": "argentina",
+        "mexican": "mexico",
+        "canadian": "canada",
+        "japanese": "japan",
+        "australian": "australia",
+        "new zealander": "new zealand",
+        "south african": "south africa",
+        "finnish": "finland",
+        "swedish": "sweden",
+        "danish": "denmark",
+        "monegasque": "monaco",
+        "colombian": "colombia",
+        "venezuelan": "venezuela",
+        "polish": "poland",
+        "portuguese": "portugal",
+        "russian": "russia",
+        "indian": "india",
+        "indonesian": "indonesia",
+        "thai": "thailand",
     }
     if not isinstance(name, str):
         return ""
@@ -127,8 +163,8 @@ def question3_mechanical_retirement_by_constructor(
     def era_label(y: int) -> str | None:
         if HYBRID_ERA_START <= y <= HYBRID_ERA_END:
             return f"{HYBRID_ERA_START}_{HYBRID_ERA_END}"
-        if y >= GROUND_EFFECT_START:
-            return f"{GROUND_EFFECT_START}_plus"
+        if GROUND_EFFECT_START <= y <= 2024:
+            return f"{GROUND_EFFECT_START}_2024"
         return None
 
     df["era"] = df["year"].map(era_label)

@@ -4,6 +4,11 @@ Predict whether each driver finishes **on the podium** (`positionOrder ≤ 3`) u
 
 **New to the repo?** → Start here: **[GETTING_STARTED.md](GETTING_STARTED.md)** (local setup, Kaggle, troubleshooting, submission).
 
+## Course brief
+
+- [Milestone 1: F1 Podium Prediction Companion](docs/course_guidelines/Milestone_1_F1_Podium_Prediction_Companion.pdf)
+- [Formula 1 for Newcomers](docs/course_guidelines/F1_for_Newcomers.pdf)
+
 ## Quick links
 
 | Doc | Purpose |
