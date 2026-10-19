@@ -20,7 +20,7 @@ SETUP_MD = """# Milestone 1 — Kaggle edition
 Download outputs from the **Output** tab (`figures/`, `processed/*.csv`).
 """
 
-SETUP_CODE = """# Kaggle environment setup (run first; Internet ON for git clone)
+SETUP_CODE = """# Kaggle environment setup (run first; Internet ON for GitHub sync)
 import os
 import subprocess
 import sys
@@ -43,14 +43,24 @@ if csv_dir is None:
     )
 os.environ["F1_DATA_RAW"] = str(csv_dir)
 
-# --- 2) Code lives in /kaggle/working (clone full repo; do not use f1-podium-src as ROOT) ---
+# --- 2) Code lives in /kaggle/working (always sync latest main to avoid stale Kaggle code) ---
 ROOT = WORK / "f1-podium-prediction"
-if not (ROOT / "src" / "config.py").exists():
+if (ROOT / ".git").is_dir():
+    subprocess.run(["git", "-C", str(ROOT), "fetch", "origin", "main"], check=True)
+    subprocess.run(["git", "-C", str(ROOT), "reset", "--hard", "origin/main"], check=True)
+else:
+    if ROOT.exists():
+        import shutil
+        shutil.rmtree(ROOT)
     subprocess.run(
         ["git", "clone", "--depth", "1", "https://github.com/CrimeWizard/f1-podium-prediction.git", str(ROOT)],
         check=True,
     )
 
+# Run All can reuse a live kernel; discard imported project modules after syncing.
+for module_name in list(sys.modules):
+    if module_name == "src" or module_name.startswith("src."):
+        del sys.modules[module_name]
 sys.path.insert(0, str(ROOT))
 os.chdir(ROOT)
 subprocess.run(
@@ -61,6 +71,7 @@ subprocess.run(
 from src.config import get_data_raw
 
 print("Project root (code):", ROOT)
+print("Source revision:", subprocess.check_output(["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"], text=True).strip())
 print("CSV folder (data):", get_data_raw(), "| OK:", (get_data_raw() / "results.csv").exists())
 """
 

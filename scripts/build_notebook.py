@@ -204,7 +204,7 @@ md(
 
 **Q2** compares home vs away podium rates within valid actual-grid bins (1–5, 6–10, 11–15, 16+). Missing/zero grids and rows with unknown driver nationality or circuit country are excluded.
 
-**Q3** mechanical retirements use an explicit **status → category** map (`src/status_mapping.py`); only `category == mechanical` counts. Explicit pre-race non-start statuses are excluded from the denominator; grid 0 is retained because it can mean a pit-lane start. Sample counts are shown because constructor rates can be noisy for small teams.
+**Q3** mechanical retirements use an explicit **status → category** map (`src/status_mapping.py`); only `category == mechanical` counts. Explicit pre-race non-start statuses are excluded from the denominator; grid 0 is retained because it can mean a pit-lane start. Ergast has no independent starter flag, so a mechanical failure recorded without an explicit non-start status can be ambiguous at the start line. Sample counts are shown because constructor rates can be noisy for small teams.
 """
 )
 code(

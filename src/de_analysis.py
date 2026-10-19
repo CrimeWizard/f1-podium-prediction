@@ -43,7 +43,11 @@ NON_START_STATUS_PATTERN = (
 
 
 def _race_starters(base: pd.DataFrame, status: pd.DataFrame) -> pd.DataFrame:
-    """Keep result rows that represent a race start, including pit-lane starts."""
+    """Infer starts by excluding explicit non-start statuses; keep pit-lane starts.
+
+    Ergast has no independent started flag, so a mechanical failure reported
+    without an explicit non-start status can still be ambiguous at the start line.
+    """
     status_text = status[["statusId", "status"]].rename(columns={"status": "status_text"})
     df = base.merge(status_text, on="statusId", how="left")
     known_status = df["status_text"].notna() & df["status_text"].str.strip().ne("")
