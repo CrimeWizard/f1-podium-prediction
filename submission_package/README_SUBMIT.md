@@ -1,25 +1,13 @@
-# F1 Podium Prediction — submission handoff
+# Milestone 1 submission handoff
 
-## Course form
-https://forms.gle/esDxHsvfzffYHVAZ9
+The form asks for a Kaggle notebook link, a GitHub repository link, and a PDF report.
 
-The repository's course checklist says the form asks for these items:
+- Kaggle notebook: https://www.kaggle.com/code/crimewizard/acl-ms1
+- GitHub repository: https://github.com/CrimeWizard/f1-podium-prediction
+- PDF location: `MILESTONE1_SUBMISSION_REPORT.pdf`
 
-1. **Public GitHub repository:** https://github.com/CrimeWizard/f1-podium-prediction
-2. **Public Kaggle notebook:** https://www.kaggle.com/code/crimewizard/acl-ms1
-3. **PDF report:** upload `MILESTONE1_SUBMISSION_REPORT.pdf` from this folder.
+## Status
 
-The form itself could not be opened by the web verifier, so verify its current fields when you open it.
+The local source now resets driver and constructor championship standings at each season opener. This is newer than the public Kaggle Version 5 run and the PDF currently in this folder. To submit a report for the fixed project, publish the source update to GitHub, run **Save Version → Save & Run All** on Kaggle, verify the new run succeeds, then regenerate the PDF from that run's outputs and replace this file.
 
-## Files in this folder
-
-- `MILESTONE1_SUBMISSION_REPORT.pdf` — report to upload.
-- The figures embedded in the PDF are the published Kaggle run's output images (not local re-creations).
-- `milestone1_kaggle.ipynb` — Kaggle notebook source. The existing public notebook link is the URL to submit; use this file only if you need to replace/re-run that notebook.
-- `f1-podium-src.zip` — supplemental source bundle used by the Kaggle instructions; upload as a public Kaggle dataset only if setting up/running the notebook requires it. It is not listed as a separate course form item.
-
-## Before submitting
-
-The project notes say the Kaggle notebook must be public and have a successful **Save Version → Save & Run All**. The local notebook has no saved cell outputs, so this checkout does not prove that run succeeded. Open the Kaggle link and confirm its latest public version completed successfully before pasting it into the form.
-
-The README lists a deadline of **18 October 2026, 11:59 PM**. That date has passed (current date: 19 October 2026); contact the course staff about late-submission acceptance if you have not already submitted.
+The source notebook and ZIP are optional setup files; the form does not ask you to upload them.

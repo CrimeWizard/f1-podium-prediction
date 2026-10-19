@@ -8,19 +8,21 @@ from src.cleaning import clean_qualifying_times
 
 
 def pre_race_driver_standings(driver_standings: pd.DataFrame, races: pd.DataFrame) -> pd.DataFrame:
-    """Standings as known BEFORE each race (same raceId row = after previous round)."""
+    """Current-season standings before each race; championship resets each season."""
     ds = driver_standings.merge(races[["raceId", "year", "date"]], on="raceId", how="left")
-    ds = ds.sort_values(["driverId", "date"])
-    ds["points_before"] = ds.groupby("driverId")["points"].shift(1).fillna(0)
-    ds["position_before"] = ds.groupby("driverId")["position"].shift(1)
+    ds = ds.sort_values(["driverId", "year", "date"])
+    season = ["driverId", "year"]
+    ds["points_before"] = ds.groupby(season)["points"].shift(1).fillna(0)
+    ds["position_before"] = ds.groupby(season)["position"].shift(1)
     return ds[["raceId", "driverId", "points_before", "position_before"]]
 
 
 def pre_race_constructor_standings(constructor_standings: pd.DataFrame, races: pd.DataFrame) -> pd.DataFrame:
     cs = constructor_standings.merge(races[["raceId", "year", "date"]], on="raceId", how="left")
-    cs = cs.sort_values(["constructorId", "date"])
-    cs["points_before"] = cs.groupby("constructorId")["points"].shift(1).fillna(0)
-    cs["position_before"] = cs.groupby("constructorId")["position"].shift(1)
+    cs = cs.sort_values(["constructorId", "year", "date"])
+    season = ["constructorId", "year"]
+    cs["points_before"] = cs.groupby(season)["points"].shift(1).fillna(0)
+    cs["position_before"] = cs.groupby(season)["position"].shift(1)
     return cs.rename(
         columns={
             "points_before": "constructor_points_before",
