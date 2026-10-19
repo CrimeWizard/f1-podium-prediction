@@ -63,7 +63,7 @@ This project builds an end-to-end, leakage-safe machine learning pipeline to pre
   - *Grid 6–10:* Home 8.7% (36/416) vs Away 11.4% (582/5,126) (-2.7%)
   - *Grid 11–15:* Home 2.7% (11/414) vs Away 3.0% (154/5,117) (-0.3%)
   - *Grid 16+:* Home 0.3% (2/729) vs Away 0.7% (53/7,202) (-0.4%)
-- **Descriptive Conclusion:** Controlling for grid reveals no consistent or systematic home advantage. Differences are minor across bins and swing in opposite directions (+3.5% in top-5 vs -2.7% in midfield), showing that home status provides no reliable independent predictive boost once starting grid is accounted for.
+- **Descriptive Conclusion:** Controlling for grid reveals no consistent or systematic home advantage. Differences are minor across bins and swing in opposite directions (+3.5% in top-5 vs -2.7% in midfield), showing that the observed rates show no consistent home advantage across the grid bins.
 
 ### Q3. Mechanical Retirement Rates by Constructor (2014–2021 vs 2022–2024)
 - Classified status strings into pure mechanical failures (power unit, gearbox, hydraulics, electrical, suspension), excluding accidents, driver errors, and regulatory disqualifications.

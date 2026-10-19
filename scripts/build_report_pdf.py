@@ -281,7 +281,7 @@ q2_text = (
     'In Grid 16+, home was 0.3% (2/729) vs 0.7% away (53/7,202). '
     '<i>Descriptive Conclusion:</i> Controlling for grid reveals no consistent or systematic home advantage. '
     'Observed rates differ negligibly across bins and swing in opposite directions (+3.5% in top-5 vs &minus;2.7% in midfield), '
-    'showing that home status provides no reliable independent predictive boost once starting grid is accounted for.'
+    'showing that the observed rates show no consistent home advantage across the grid bins.'
 )
 story.append(P(q2_text, 'BodyRegular'))
 
