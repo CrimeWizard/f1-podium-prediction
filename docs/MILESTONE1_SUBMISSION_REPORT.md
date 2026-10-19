@@ -29,7 +29,7 @@
 
 ## 2. EDA and cleaning
 
-**Figure provenance.** Every figure in this report is copied from the public Kaggle notebook output (`crimewizard/acl-ms1`, run version 1, kernel version `359399439`).
+**Figure provenance.** The corrected Q2 figure is copied from the public Kaggle notebook output (`crimewizard/acl-ms1`, saved version 2, kernel version `360186961`). The remaining report figures are from its earlier successful Kaggle run (kernel version `359399439`).
 
 **EDA before cleaning.** We inspected raw `positionOrder` in `results` to confirm finish positions are usable for the target. We plotted mean qualifying rows per race by year; the `qualifying` table is empty for early decades and becomes dense from the mid-1990s onward, so quali features are often missing for old seasons.
 
@@ -53,7 +53,7 @@
 
 ![Home race advantage by grid bin](../outputs/figures/de_q2_home_advantage.png)
 
-**Q3 — Mechanical retirement by constructor.** Ergast status strings are mapped to categories (`src/status_mapping.py`). Mechanical DNFs are counted per constructor for grid > 0 starts, comparing 2014–2021 vs 2022+. Status category counts and tables are in notebook section 4.
+**Q3 — Mechanical retirement by constructor.** Ergast status strings are mapped to categories (`src/status_mapping.py`). Mechanical DNFs are counted per constructor for grid > 0 starts, comparing 2014–2021 vs 2022–2024. Status category counts and tables are in notebook section 4.
 
 ![Front-row podium rates by circuit and era](../outputs/figures/de_q1_front_row_podium.png)
 
@@ -81,7 +81,7 @@ On validation PR-AUC we compared: (1) impute-then-scale vs scale-then-impute, (2
 
 ## 6. Modeling (>= 3 attempts)
 
-Models: (1) logistic regression baseline, (2) random forest (200 trees, class weights), (3) shallow feed-forward neural network (64-32, dropout). Metrics from final Kaggle run (`acl-ms1`, Oct 2025):
+Models: (1) logistic regression baseline, (2) random forest (200 trees, class weights), (3) shallow feed-forward neural network (64-32, dropout). Metrics from the successful Kaggle run (`acl-ms1`, saved version 2, Oct 19, 2026):
 
 **PR-AUC (primary):**
 
@@ -89,7 +89,7 @@ Models: (1) logistic regression baseline, (2) random forest (200 trees, class we
 |-------|-------|-----|------|
 | Logistic regression | 0.546 | 0.707 | 0.669 |
 | Random forest (default) | 0.998 | 0.696 | 0.675 |
-| Shallow FFNN | 0.582 | 0.734 | 0.663 |
+| Shallow FFNN | 0.580 | 0.724 | 0.664 |
 
 Default random forest **overfits** (train PR-AUC ~0.99). A **regularized** forest (`max_depth=12`, larger `min_samples_leaf`, `max_samples=0.7`) yields train 0.630, val 0.718, **test 0.694**, reducing the train-val gap. See notebook section 8b.
 
