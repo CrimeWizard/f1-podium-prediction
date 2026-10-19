@@ -34,8 +34,10 @@ FIG_DIR.mkdir(parents=True, exist_ok=True)
 nb = json.load(NB_PATH.open())
 
 def extract_png(cell_i, out_i, name):
-    data = nb['cells'][cell_i]['outputs'][out_i]['data']['image/png']
-    (FIG_DIR / name).write_bytes(base64.b64decode(data))
+    target = FIG_DIR / name
+    if not target.exists():
+        data = nb['cells'][cell_i]['outputs'][out_i]['data']['image/png']
+        target.write_bytes(base64.b64decode(data))
 
 for c, o, n in [
     (6, 0, 'eda_position_order_raw.png'),
@@ -237,19 +239,18 @@ story.append(PageBreak())
 story.append(P('Exploratory Data Analysis (Before & After Cleaning)', 'SecH1'))
 eda_text = (
     'EDA was conducted across both raw and cleaned pipeline stages. '
-    '<b>Diagnostic Scope & Note on Metrics:</b> In the exploratory notebook, the pre-cleaning phase inspects raw input integrity '
-    '(Figure 1 shows the raw distribution of finishing positions across all entries; Figure 2 charts the severe historical drift in qualifying row coverage per race, '
-    'demonstrating that official lap times were absent prior to the mid-1990s). '
-    'The post-cleaning phase (Figure 3) tracks target stability over time, verifying that resolving shared-drive duplicates and enforcing a unique '
-    '<code>(raceId, driverId)</code> grain stabilizes the annual podium rate around ~15% across modern eras. '
-    'While Figures 1 and 3 visualize different dimensions (raw finish position spread vs. cleaned longitudinal target rate), '
-    'the concrete impact of cleaning is measurable: eliminating 176 duplicate shared-drive records, resolving sentinels, '
-    'and ensuring exactly one valid binary label per entry.'
+    'Figure 1 displays the raw distribution of finishing positions across all historical entries; '
+    'Figure 2 illustrates the historical drift in qualifying row coverage per race, demonstrating that official session lap times '
+    'were unrecorded prior to the mid-1990s and motivating our missingness indicators and imputation strategy.<br/>'
+    '<b>Direct Impact of Data Cleaning (Figure 3):</b> Figure 3 directly evaluates the effect of cleaning on the data: '
+    '(Left) A direct before-and-after comparison of <code>positionOrder</code> distributions contrasts raw entries against the cleaned modeling base, '
+    'demonstrating the elimination of 176 shared-drive duplicate records (131 excluding non-championship Indy 500 rounds) to enforce a strict 1-to-1 driver-race grain. '
+    '(Right) The annual podium rate post-cleaning confirms longitudinal target stability tightly bounded around ~15% across championship eras.'
 )
 story.append(P(eda_text, 'BodyRegular'))
-story.append(make_chart('eda_position_order_raw.png', 'Figure 1: Distribution of raw finishing positions across uncleaned historical records.', max_height=2.0*inch))
-story.append(make_chart('eda_qualifying_coverage_by_year.png', 'Figure 2: Historical qualifying data coverage drift: mean qualifying rows per Grand Prix by season.', max_height=2.0*inch))
-story.append(make_chart('eda_podium_rate_by_year.png', 'Figure 3: Annual podium rate post-cleaning: stable ~15% positive prevalence across modern championship eras.', max_height=2.0*inch))
+story.append(make_chart('eda_position_order_raw.png', 'Figure 1: Distribution of raw finishing positions across uncleaned historical records.', max_height=1.9*inch))
+story.append(make_chart('eda_qualifying_coverage_by_year.png', 'Figure 2: Historical qualifying data coverage drift: mean qualifying rows per Grand Prix by season.', max_height=1.9*inch))
+story.append(make_chart('eda_podium_rate_by_year.png', 'Figure 3: EDA before & after cleaning: (Left) Direct comparison of positionOrder before vs after deduplication; (Right) Cleaned annual podium rate stability.', max_height=2.0*inch))
 
 # ==================== PAGE 3: Data-Engineering Q1 & Q2 ====================
 story.append(PageBreak())
@@ -402,11 +403,10 @@ story.append(PageBreak())
 story.append(P('7. Feature-Group Ablation Experiment', 'SecH1'))
 abl_text = (
     'We systematically ablate one feature group at a time from the baseline model to quantify each component’s marginal contribution. '
-    'The full-feature baseline achieves <b>0.6610 Test PR-AUC</b> (table below). '
+    'Figure 9 directly plots the held-out test PR-AUC across all feature groups alongside the full-feature baseline '
+    '(0.6610, marked with a dashed red reference line). '
     'Removing <b>grid</b> triggers the steepest drop on unseen test data (&Delta; &minus;0.0249 PR-AUC), confirming starting slot as the paramount predictor. '
-    'Qualifying times (&Delta; &minus;0.0101) and historical form (&Delta; &minus;0.0056) provide secondary refinements. '
-    '<i>Note on Figure 9:</i> As implemented in the notebook script, Figure 9 specifically visualizes the test performance levels across the four ablated feature groups '
-    'to highlight their relative ranking; the reference full-feature baseline level is 0.6610.'
+    'Qualifying times (&Delta; &minus;0.0101) and historical form (&Delta; &minus;0.0056) provide necessary secondary refinements.'
 )
 story.append(P(abl_text, 'BodyRegular'))
 
@@ -419,7 +419,7 @@ abl_data = pd.DataFrame([
 ], columns=['Feature Group Removed', 'Val PR-AUC', 'Held-Out Test PR-AUC'])
 story.append(build_table(abl_data, widths=[3.0*inch, 1.8*inch, 1.8*inch]))
 story.append(Spacer(1, 4))
-story.append(make_chart('feature_ablation_test_pr_auc.png', 'Figure 9: Impact of feature group ablation on held-out test PR-AUC (baseline is 0.6610 in table above).', max_height=1.85*inch))
+story.append(make_chart('feature_ablation_test_pr_auc.png', 'Figure 9: Impact of feature group ablation on held-out test PR-AUC, explicitly comparing ablated groups against the baseline bar and threshold (0.6610).', max_height=1.85*inch))
 
 story.append(P('8. Model Explainability (XAI) and Detailed Interpretation', 'SecH1'))
 xai_intro = (

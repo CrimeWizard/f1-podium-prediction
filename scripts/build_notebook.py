@@ -189,9 +189,25 @@ save_processed(base, "base_results")
 
 md("## 3. EDA (after cleaning)")
 code(
-    """fig, ax = plt.subplots(figsize=(6, 4))
-base.groupby("year")["podium"].mean().plot(ax=ax)
-ax.set_title("Podium rate by season (after cleaning)")
+    """fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 4.5))
+
+# Panel 1: Direct comparison of positionOrder before vs after cleaning
+results_raw["positionOrder"].hist(bins=30, ax=ax1, alpha=0.55, color="#e74c3c", label="Raw results (before cleaning)")
+base["positionOrder"].hist(bins=30, ax=ax1, alpha=0.55, color="#2ecc71", label="Cleaned modeling base (1 row per driver-race)")
+ax1.set_title("Direct comparison: positionOrder before vs after cleaning")
+ax1.set_xlabel("positionOrder")
+ax1.set_ylabel("Frequency")
+ax1.legend()
+ax1.grid(True, alpha=0.3)
+
+# Panel 2: Cleaned annual podium rate stability
+base.groupby("year")["podium"].mean().plot(ax=ax2, color="#0D6680", lw=2)
+ax2.set_title("Annual podium rate stability (after cleaning)")
+ax2.set_xlabel("Season (Year)")
+ax2.set_ylabel("Podium Rate")
+ax2.grid(True, alpha=0.3)
+
+plt.tight_layout()
 plt.savefig(FIGURES_DIR / "eda_podium_rate_by_year.png", bbox_inches="tight")
 plt.show()
 """
@@ -488,10 +504,21 @@ code(
     """abl = ablation_table(train_df, val_df, test_df)
 abl.to_csv(DATA_PROCESSED / "feature_ablation.csv", index=False)
 display(abl)
-abl[abl["feature_group_removed"] != "none"].sort_values("pr_auc_test").plot(
-    x="feature_group_removed", y="pr_auc_test", kind="bar", legend=False,
-    title="Test PR-AUC after removing each feature group", ylabel="PR-AUC"
-)
+
+# Plot test PR-AUC including baseline and reference line
+abl_plot = abl.copy()
+abl_plot["feature_group"] = abl_plot["feature_group_removed"].replace({"none": "All features (baseline)"})
+base_val = float(abl.loc[abl["feature_group_removed"] == "none", "pr_auc_test"].values[0])
+
+fig, ax = plt.subplots(figsize=(8.5, 4.5))
+bar_colors = ["#133B5C" if g == "none" else "#0D6680" for g in abl_plot["feature_group_removed"]]
+bars = ax.bar(abl_plot["feature_group"], abl_plot["pr_auc_test"], color=bar_colors, width=0.55)
+ax.axhline(base_val, color="#e74c3c", linestyle="--", linewidth=1.5, label=f"Baseline Test PR-AUC ({base_val:.4f})")
+ax.set_title("Held-out test PR-AUC: Feature group ablation vs baseline", fontsize=12)
+ax.set_ylabel("Test PR-AUC")
+ax.set_ylim(0, 0.75)
+plt.xticks(rotation=20, ha="right")
+ax.legend(loc="lower right")
 plt.tight_layout()
 plt.savefig(FIGURES_DIR / "feature_ablation_test_pr_auc.png", bbox_inches="tight")
 plt.show()

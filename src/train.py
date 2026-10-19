@@ -157,7 +157,10 @@ def compare_random_forest_overfitting(
 
 def train_shallow_ffnn(X_train, y_train, X_val, y_val):
     """Returns fitted Keras model + preprocessor + threshold. Requires tensorflow."""
+    import tensorflow as tf
     from tensorflow import keras
+
+    keras.utils.set_random_seed(42)
 
     prep = build_preprocessor(X_train)
     Xtr = prep.fit_transform(X_train)

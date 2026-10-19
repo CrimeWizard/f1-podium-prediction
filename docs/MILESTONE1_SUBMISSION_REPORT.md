@@ -38,8 +38,9 @@ This project builds an end-to-end, leakage-safe machine learning pipeline to pre
 ## 3. Exploratory Data Analysis (Before & After Cleaning)
 
 - **Pre-Cleaning Diagnostic Scope:** Raw finishing position distribution (Figure 1) inspects initial spread across finishing positions. Figure 2 charts historical drift in qualifying row coverage per race, showing electronic session lap times are absent prior to the mid-1990s.
-- **Post-Cleaning Target Stability:** Figure 3 tracks target prevalence over time, confirming that resolving shared-drive duplicates and enforcing a unique `(raceId, driverId)` grain stabilizes the annual podium rate around ~15% across modern eras.
-- **Note on Metrics:** While Figures 1 and 3 visualize different diagnostic dimensions (raw finish position spread vs. cleaned longitudinal target rate), the concrete effect of cleaning is directly measurable: eliminating 176 duplicate shared-drive records, resolving sentinels, and establishing exactly one valid binary label per entry.
+- **Direct Impact of Data Cleaning (Figure 3):**
+  - *(Left Panel)* Direct before-and-after comparison of `positionOrder` distributions directly visualizes the effect of cleaning, demonstrating the elimination of 176 shared-drive duplicate records (131 excluding non-championship Indy 500 rounds) to enforce a strict 1-to-1 driver-race grain.
+  - *(Right Panel)* Post-cleaning annual podium rate verifies longitudinal target stability tightly bounded around ~15% across championship eras.
 
 ---
 
@@ -131,7 +132,7 @@ Decision threshold tuned on validation data (0.7584) and evaluated on held-out t
 | Drop Rolling Driver Form | 0.7071 | 0.6554 |
 
 - Starting grid is the single most critical feature group; dropping it reduces test PR-AUC by 0.0249.
-- *Note on Figure 9:* Figure 9 plots the test PR-AUC levels across the four ablated feature groups to highlight their relative ranking; the reference full-feature baseline level is 0.6610 as reported in the table above.
+- *Note on Figure 9:* Figure 9 directly compares the held-out test PR-AUC across all ablated feature groups alongside the full-feature baseline bar and horizontal threshold line (0.6610).
 
 ---
 
