@@ -69,6 +69,7 @@ if Path("/kaggle/input").exists():
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+from IPython.display import Markdown, display
 
 ROOT = Path.cwd()
 if not (ROOT / "src").exists():
@@ -167,6 +168,11 @@ md(
 code(
     """pk = pd.DataFrame([r.__dict__ for r in audit_primary_keys(tables)])
 fk = pd.DataFrame([r.__dict__ for r in audit_foreign_keys(tables)])
+expected_tables = {Path(p).stem for p in __import__("src.config", fromlist=["TABLE_FILES"]).TABLE_FILES}
+assert set(tables) == expected_tables, f"Unexpected/missing raw tables: {expected_tables.symmetric_difference(tables)}"
+assert set(pk["table"]) == expected_tables, f"Primary-key audit did not cover: {expected_tables.difference(pk['table'])}"
+assert not pk["duplicate_rows"].any() and not pk["null_key_rows"].any(), "Primary-key audit failed"
+assert not fk["orphan_rows"].any(), "Foreign-key audit failed"
 display(pk)
 display(fk)
 
@@ -194,30 +200,47 @@ plt.show()
 md(
     """## 4. Data-engineering questions
 
-**Q1** reports qualifying positions 1–2 and actual grid positions 1–2 separately: penalties can make them differ. Each denominator includes only rows with the relevant position observed; rankings are split before/from 2014.
+**Q1** reports qualifying positions 1–2 and actual grid positions 1–2 separately: penalties can make them differ. Both denominators include actual starters only; missing qualifying records are excluded from the qualifying comparison. The ranking chart requires at least 20 starts per circuit/era/basis to reduce small-sample noise; full counts remain in the saved table.
 
-**Q2** compares home vs away podiums within **grid bins** so we do not confound home advantage with better qualifying.
+**Q2** compares home vs away podium rates within valid actual-grid bins (1–5, 6–10, 11–15, 16+). Missing/zero grids and rows with unknown driver nationality or circuit country are excluded.
 
-**Q3** mechanical retirements use an explicit **status → category** map (`src/status_mapping.py`); only `category == mechanical` counts, excluding crashes/driver errors/regulatory DNFs.
+**Q3** mechanical retirements use an explicit **status → category** map (`src/status_mapping.py`); only `category == mechanical` counts. Explicit pre-race non-start statuses are excluded from the denominator; grid 0 is retained because it can mean a pit-lane start. Sample counts are shown because constructor rates can be noisy for small teams.
 """
 )
 code(
     """status_map = build_status_mapping(tables["status"])
 status_map.to_csv(DATA_PROCESSED / "status_category_mapping.csv", index=False)
 display(status_map.groupby("category").size().rename("count"))
+display(status_map)
 
-q1 = question1_front_row_podium_by_circuit(base, tables["circuits"], tables["qualifying"])
+q1 = question1_front_row_podium_by_circuit(base, tables["circuits"], tables["qualifying"], tables["status"])
 q1.to_csv(DATA_PROCESSED / "de_q1_front_row_by_circuit.csv", index=False)
-q1["rank_within_era"] = q1.groupby(["start_basis", "era"])["podium_rate"].rank(method="min", ascending=False)
-q1_rank = q1.pivot_table(index=["start_basis", "circuitId", "name"], columns="era", values="rank_within_era")
+print("Q1 nonstarters excluded:", q1.attrs["nonstarters_excluded"])
+print("Q1 starters without a valid qualifying position:", q1.attrs["starters_without_qualifying_position"])
+q1_stable = q1.loc[q1["front_row_starts"] >= 20].copy()
+q1_stable["rank_within_era"] = q1_stable.groupby(["start_basis", "era"])["podium_rate"].rank(method="min", ascending=False)
+q1_rank = q1_stable.pivot_table(index=["start_basis", "circuitId", "name"], columns="era", values="rank_within_era")
 if "pre_2014" in q1_rank and "from_2014" in q1_rank:
     q1_rank["rank_change_pre_minus_post"] = q1_rank["pre_2014"] - q1_rank["from_2014"]
 q1_rank.to_csv(DATA_PROCESSED / "de_q1_circuit_rank_changes.csv")
-q1_top = q1.sort_values("podium_rate", ascending=False).groupby(["start_basis", "era"], observed=True).head(10)
+q1_top = q1_stable.sort_values("podium_rate", ascending=False).groupby(["start_basis", "era"], observed=True).head(10)
 display(q1_top.sort_values(["start_basis", "era", "podium_rate"], ascending=[True, True, False]))
+q1_lines = []
+for (basis, era), group in q1_top.groupby(["start_basis", "era"], observed=True):
+    best = group.sort_values("podium_rate", ascending=False).iloc[0]
+    q1_lines.append(
+        f"- **{basis.replace('_', ' ')} / {era}:** {best['name']} "
+        f"({best['podium_rate']:.1%}; {int(best['podiums'])}/{int(best['front_row_starts'])} starters)."
+    )
+display(Markdown("**Answer Q1.** Highest observed conversion among circuits with at least 20 relevant starts:\\n\\n" + "\\n".join(q1_lines)))
+for basis, ranks in q1_rank.groupby(level="start_basis"):
+    paired = ranks.dropna(subset=["pre_2014", "from_2014"])
+    if len(paired) >= 2:
+        rho = paired["pre_2014"].corr(paired["from_2014"], method="spearman")
+        print(f"{basis}: paired-circuit Spearman rank correlation pre/from 2014 = {rho:.3f} (n={len(paired)} circuits)")
 
 fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-for ax, ((basis, era), g) in zip(axes.flat, q1.groupby(["start_basis", "era"], observed=True)):
+for ax, ((basis, era), g) in zip(axes.flat, q1_stable.groupby(["start_basis", "era"], observed=True)):
     top = g.nlargest(10, "podium_rate").sort_values("podium_rate")
     ax.barh(top["name"], top["podium_rate"])
     ax.set_title(f"{basis.replace('_', ' ').title()} — {era}")
@@ -228,9 +251,30 @@ fig.tight_layout()
 plt.savefig(FIGURES_DIR / "de_q1_front_row_podium.png", bbox_inches="tight")
 plt.show()
 
-q2 = question2_home_podium_controlled_grid(base, tables["drivers"], tables["circuits"])
+q2 = question2_home_podium_controlled_grid(base, tables["drivers"], tables["circuits"], tables["status"])
+print("Q2 rows excluded for unknown country:", q2.attrs["unknown_country_rows_excluded"])
+print("Q2 rows excluded for zero/missing grid:", q2.attrs["zero_or_missing_grid_rows_excluded"])
 display(q2)
-q2.pivot(index="grid_bin", columns="home_race", values="podium_rate").plot(
+q2_pivot = q2.pivot(index="grid_bin", columns="home_race", values="podium_rate")
+q2_counts = q2.pivot(index="grid_bin", columns="home_race", values="starts")
+q2_lines = []
+q2_differences = []
+for grid_bin in q2_pivot.index:
+    away = q2_pivot.loc[grid_bin].get(0, float("nan"))
+    home = q2_pivot.loc[grid_bin].get(1, float("nan"))
+    n_away = q2_counts.loc[grid_bin].get(0, 0)
+    n_home = q2_counts.loc[grid_bin].get(1, 0)
+    if pd.notna(home) and pd.notna(away):
+        q2_differences.append(home - away)
+        q2_lines.append(f"- **Grid {grid_bin}:** home {home:.1%} (n={int(n_home)}) vs away {away:.1%} (n={int(n_away)}).")
+if q2_differences and all(d > 0 for d in q2_differences):
+    q2_summary = "Home drivers have a higher observed podium rate in every compared grid bin."
+elif q2_differences and all(d < 0 for d in q2_differences):
+    q2_summary = "Home drivers have a lower observed podium rate in every compared grid bin."
+else:
+    q2_summary = "The direction varies by grid bin; the data do not show a consistent home advantage after this control."
+display(Markdown("**Answer Q2.** " + q2_summary + "\\n\\n" + "\\n".join(q2_lines)))
+q2_pivot.plot(
     kind="bar", figsize=(8, 4), title="Q2 home vs away by grid bin"
 )
 plt.savefig(FIGURES_DIR / "de_q2_home_advantage.png", bbox_inches="tight")
@@ -238,8 +282,18 @@ plt.show()
 
 q3 = question3_mechanical_retirement_by_constructor(base, tables["status"], tables["constructors"])
 q3.to_csv(DATA_PROCESSED / "de_q3_mechanical_retirement_by_constructor.csv", index=False)
+print("Q3 explicit nonstarters excluded:", q3.attrs["nonstarters_excluded"])
 q3_top = q3.sort_values("mech_rate", ascending=False).groupby("era", observed=True).head(10)
 display(q3_top.sort_values(["era", "mech_rate"], ascending=[True, False]))
+q3_lines = []
+for era, group in q3_top.groupby("era", observed=True):
+    best = group.sort_values("mech_rate", ascending=False).iloc[0]
+    q3_lines.append(
+        f"- **{era}:** {best['name']} has the highest observed rate "
+        f"({best['mech_rate']:.1%}; {int(best['mechanical_retirements'])}/"
+        f"{int(best['starts'])} starters)."
+    )
+display(Markdown("**Answer Q3.** Highest observed mechanical-retirement rate by era (rates are descriptive; denominators differ):\\n\\n" + "\\n".join(q3_lines)))
 
 fig, axes = plt.subplots(1, 2, figsize=(16, 7))
 for ax, (era, g) in zip(axes, q3.groupby("era", observed=True)):
@@ -271,6 +325,30 @@ code(
     """model_df = build_modeling_table(tables, base)
 save_processed(model_df, "modeling_table")
 model_df.head()
+"""
+)
+
+md("""### Feature evidence before modeling
+
+Grid is measured after penalties and is available at the prediction cutoff. Prior podium form is shifted so it excludes the current race. These plots check their relationship to the target before fitting models; they are descriptive, not causal.
+""")
+code(
+    """grid_eda = model_df.loc[model_df["grid"].between(1, 30)].copy()
+grid_eda = grid_eda.groupby("grid", observed=True).agg(starts=(TARGET, "size"), podium_rate=(TARGET, "mean"))
+grid_eda = grid_eda.loc[grid_eda["starts"] >= 20]
+form_eda = model_df.dropna(subset=["podium_rate_prev"]).copy()
+form_eda["prior_form_bin"] = pd.qcut(form_eda["podium_rate_prev"], q=5, duplicates="drop")
+form_eda = form_eda.groupby("prior_form_bin", observed=True).agg(starts=(TARGET, "size"), podium_rate=(TARGET, "mean"))
+display(grid_eda)
+display(form_eda)
+fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+grid_eda["podium_rate"].plot(marker="o", ax=axes[0], title="Podium rate by actual grid position")
+axes[0].set_ylabel("Podium rate")
+form_eda["podium_rate"].plot(kind="bar", ax=axes[1], title="Podium rate by prior-form quantile group")
+axes[1].set_ylabel("Podium rate")
+fig.tight_layout()
+plt.savefig(FIGURES_DIR / "feature_target_relationships.png", bbox_inches="tight")
+plt.show()
 """
 )
 
@@ -312,6 +390,23 @@ pd.concat([
     prep_impute.rename(columns={"imputation_strategy": "experiment"}).assign(experiment=lambda d: "imputation: " + d["experiment"]),
     prep_indy.rename(columns={"indy_policy": "experiment"}).assign(experiment=lambda d: "Indianapolis: " + d["experiment"]),
 ], ignore_index=True)[["experiment", "pr_auc_val"]].to_csv(DATA_PROCESSED / "preprocessing_experiments.csv", index=False)
+
+# Show the numerical effect of median imputation followed by standardization.
+from sklearn.impute import SimpleImputer
+from sklearn.preprocessing import StandardScaler
+preview_cols = [c for c in ["grid", "q1_sec", "points_before", "podium_rate_prev"] if c in train_df]
+preview = train_df[preview_cols]
+imputed_preview = SimpleImputer(strategy="median").fit_transform(preview)
+scaled_preview = StandardScaler().fit_transform(imputed_preview)
+distribution_effect = pd.DataFrame({
+    "feature": preview_cols,
+    "missing_pct_before": [preview[c].isna().mean() * 100 for c in preview_cols],
+    "raw_min": [preview[c].min() for c in preview_cols],
+    "raw_max": [preview[c].max() for c in preview_cols],
+    "scaled_mean_after": scaled_preview.mean(axis=0),
+    "scaled_std_after": scaled_preview.std(axis=0),
+})
+display(distribution_effect)
 """
 )
 
@@ -366,6 +461,13 @@ code(
 rf_cmp.to_csv(DATA_PROCESSED / "rf_regularization_comparison.csv", index=False)
 display(rf_cmp.pivot_table(index="model", columns="split", values="pr_auc"))
 display(rf_cmp.groupby("model")["train_minus_val_pr_auc"].first().rename("train_minus_val_pr_auc"))
+rf_regularized_metrics = rf_cmp.loc[
+    rf_cmp["model"] == "random_forest_regularized",
+    ["model", "split", "roc_auc", "pr_auc", "f1"],
+]
+metrics_df = pd.concat([metrics_df, rf_regularized_metrics], ignore_index=True)
+metrics_df.to_csv(DATA_PROCESSED / "model_metrics.csv", index=False)
+display(metrics_df.pivot_table(index="model", columns="split", values=["roc_auc", "pr_auc", "f1"]))
 """
 )
 

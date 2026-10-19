@@ -8,7 +8,7 @@
 3. **Settings** → **Internet → ON**.
 4. **Delete every cell** in the notebook.
 5. Paste **one** code cell from below → **Run**.
-6. If it prints `Loaded tables: [...]` → success. Then upload `notebooks/milestone1.ipynb` from GitHub and Run All, **or** keep using the test cell.
+6. If it prints `Loaded tables: [...]` → success. Then use **File → Import Notebook** and select the updated `notebooks/milestone1_kaggle.ipynb` from this repo. The one-cell check is only a smoke test; it is not the submission notebook.
 
 ## One-cell smoke test
 

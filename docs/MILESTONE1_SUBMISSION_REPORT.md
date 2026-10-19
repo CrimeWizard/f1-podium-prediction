@@ -1,5 +1,7 @@
 # Analytical Report — F1 Podium Prediction (GUC Milestone 1)
 
+> **Refresh required before submission.** This report and its PDF reflect the earlier Kaggle Version 2 outputs. The corrected notebook now changes Q1/Q2/Q3 denominators and adds required report evidence. Re-run the current Kaggle notebook and regenerate this report and PDF from that run before uploading.
+
 **Course:** Introduction to Artificial Intelligence — Milestone 1 (F1 Podium Prediction)
 
 **Team:**
