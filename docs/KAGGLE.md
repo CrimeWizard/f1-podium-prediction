@@ -1,21 +1,19 @@
 # Update and run the Milestone 1 notebook on Kaggle
 
-## Before opening Kaggle
+## Rerun the existing submission notebook
 
-Use the generated notebook `notebooks/milestone1_kaggle.ipynb` from the latest GitHub `main` branch. It contains the corrected Q1–Q3 analysis and the complete evaluation outputs. The source code is cloned from GitHub by the notebook; do not add a separate `f1-podium-src` dataset.
+The public `ACL_MS1` notebook has a setup cell that fetches the latest project code from GitHub `main`. For a normal update, keep using the existing Kaggle notebook; do not import the raw GitHub `.ipynb` page. The attached Formula 1 dataset stays as the notebook input, and no separate `f1-podium-src` dataset is needed.
 
 ## Kaggle steps
 
-1. Open [the current ACL_MS1 notebook](https://www.kaggle.com/code/crimewizard/acl-ms1) and sign in to the **CrimeWizard owner account**.
-2. If Kaggle shows **Copy & Edit**, click it to create an editable copy. If you see **Edit**, open the existing notebook.
-   - **Copy & Edit creates a fork.** If the URL changes, use that new notebook URL in the submission form; the old link will remain Version 2.
-3. In the notebook editor, use **File → Import Notebook** and select the updated local file `notebooks/milestone1_kaggle.ipynb`.
-4. In the right **Input** panel, confirm **Formula 1 World Championship (1950–2024)** is attached. No other dataset is needed.
-5. Open **Settings** and turn **Internet** on. The setup cell clones the public GitHub repository and installs optional SHAP/LIME packages.
-6. Choose **Run → Run All**. Wait for every cell to finish. Resolve any red error cell before proceeding.
-7. Confirm the output includes: primary-key and foreign-key audits; Q1 qualifying-versus-grid comparisons; Q2 home/away rates by grid bin; Q3 mechanical-retirement rates by era; the four-model ROC-AUC/PR-AUC/F1 table; preprocessing and ablation tables; permutation, SHAP, and local explanation outputs; and the inference examples.
-8. Choose **Save Version → Save & Run All**. Verify the saved version is public and the run status is successful. The notebook link alone does not prove this updated run is saved.
-9. From **Output**, download the new `figures/` and `processed/` artifacts. Use those outputs to regenerate the PDF report and replace the old report in the repository and submission form.
+1. Open [ACL_MS1](https://www.kaggle.com/code/crimewizard/acl-ms1) and sign in to the owner account. Click **Edit** to edit this notebook. If Kaggle requires **Copy & Edit**, make a fork and use that notebook's URL for submission.
+2. In the **Input** panel, confirm **Formula 1 World Championship (1950–2024)** is attached.
+3. In **Settings**, turn **Internet** on. The first setup cell fetches GitHub `main`, so it will pick up the season-boundary correction.
+4. Choose **Run → Run All**. Wait for every cell to finish; resolve any red error cell before proceeding.
+5. Confirm setup prints **Source revision: `34b2186` or newer**, plus the CSV path and `OK: True`.
+6. Confirm the outputs include key audits; Q1–Q3 tables and plots; four-model ROC-AUC/PR-AUC/F1 metrics; preprocessing and ablation tables; permutation, SHAP, and local explanation outputs; and both inference examples.
+7. Choose **Save Version → Save & Run All**. Verify the saved version is public and the run status is successful.
+8. From **Output**, download the new notebook with outputs and the `figures/` and `processed/` artifacts. Use those corrected outputs to regenerate and replace the PDF report.
 
 ## What a successful run should show
 
