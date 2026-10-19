@@ -13,8 +13,8 @@ Predict whether each driver finishes **on the podium** (`positionOrder ≤ 3`) u
 
 | Doc | Purpose |
 |-----|---------|
-| [docs/MILESTONE1_SUBMISSION_REPORT.pdf](docs/MILESTONE1_SUBMISSION_REPORT.pdf) | Previous report from Kaggle Version 5; regenerate after rerunning the corrected standings features |
-| [docs/MILESTONE1_SUBMISSION_REPORT.md](docs/MILESTONE1_SUBMISSION_REPORT.md) | Source for the Version 5 report; refresh metrics and figures after the corrected run |
+| [docs/MILESTONE1_SUBMISSION_REPORT.pdf](docs/MILESTONE1_SUBMISSION_REPORT.pdf) | Older Version 2 report; do not use—regenerate after the corrected Kaggle run |
+| [docs/MILESTONE1_SUBMISSION_REPORT.md](docs/MILESTONE1_SUBMISSION_REPORT.md) | Older Version 2 source; refresh metrics and figures after the corrected run |
 | [GETTING_STARTED.md](GETTING_STARTED.md) | **Step-by-step run guide** for teammates |
 | [docs/KAGGLE_QUICKFIX.md](docs/KAGGLE_QUICKFIX.md) | One-cell Kaggle smoke test |
 | [docs/KAGGLE.md](docs/KAGGLE.md) | Full Kaggle upload flow |
@@ -34,7 +34,7 @@ Then follow **[GETTING_STARTED.md](GETTING_STARTED.md)** — Path A.
 
 - GitHub: https://github.com/CrimeWizard/f1-podium-prediction (public)
 - Kaggle: https://www.kaggle.com/code/crimewizard/acl-ms1 (Version 5 completed; save a new Run All version after publishing the current standings fix)
-- PDF report: [docs/MILESTONE1_SUBMISSION_REPORT.pdf](docs/MILESTONE1_SUBMISSION_REPORT.pdf)
+- PDF report: upload the report generated from the new corrected Kaggle run; the PDF currently stored in this repo is an older Version 2 report.
 - Submission Form: https://forms.gle/esDxHsvfzffYHVAZ9 (course extension communicated by the team: **19 Oct 2026, 11:59 PM Cairo time**; this deadline passed on 20 Oct 2026, so confirm late-submission options with course staff)
 
 ## Metrics & split
