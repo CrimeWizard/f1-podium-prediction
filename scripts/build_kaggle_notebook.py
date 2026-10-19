@@ -75,6 +75,51 @@ print("Source revision:", subprocess.check_output(["git", "-C", str(ROOT), "rev-
 print("CSV folder (data):", get_data_raw(), "| OK:", (get_data_raw() / "results.csv").exists())
 """
 
+IMPORTS_CODE = """# Project imports (run after the setup cell)
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+from IPython.display import Markdown, display
+from pathlib import Path
+
+ROOT = Path.cwd()
+from src.audit import audit_foreign_keys, audit_primary_keys
+from src.cleaning import build_base_results_table
+from src.config import DATA_PROCESSED, FIGURES_DIR
+from src.de_analysis import (
+    question1_front_row_podium_by_circuit,
+    question2_home_podium_controlled_grid,
+    question3_mechanical_retirement_by_constructor,
+)
+from src.experiments import (
+    ablation_table,
+    imputation_strategy_experiment,
+    indy_500_exclusion_experiment,
+    preprocessing_order_experiments,
+)
+from src.features import build_modeling_table
+from src.inference import predict_podium
+from src.io import load_raw_tables, missing_tables, save_processed
+from src.splits import temporal_split
+from src.status_mapping import build_status_mapping
+from src.train import (
+    TARGET,
+    collect_ffnn_metrics,
+    collect_sklearn_metrics,
+    feature_columns,
+    train_logistic_regression,
+    compare_random_forest_overfitting,
+    train_random_forest,
+    train_shallow_ffnn,
+    pick_threshold_on_val,
+)
+from src.xai import permutation_importance_table
+
+sns.set_theme(style="whitegrid")
+FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+DATA_PROCESSED.mkdir(parents=True, exist_ok=True)
+"""
+
 
 def main() -> None:
     if not SRC_NB.exists():
@@ -84,6 +129,7 @@ def main() -> None:
     cells = [
         {"cell_type": "markdown", "metadata": {}, "source": SETUP_MD.splitlines(keepends=True)},
         {"cell_type": "code", "metadata": {}, "outputs": [], "execution_count": None, "source": SETUP_CODE.splitlines(keepends=True)},
+        {"cell_type": "code", "metadata": {}, "outputs": [], "execution_count": None, "source": IMPORTS_CODE.splitlines(keepends=True)},
     ]
     # Skip duplicate title markdown from local notebook
     for cell in base["cells"]:
